@@ -55,7 +55,7 @@
                         </button>
                         <a class="navbar-brand" href="{% url 'backoffice:home' %}">{% block head-title %}{{ backoffice.title }}{% endblock %}</a>
                     </div>
-                    
+
                     {% if request.user.is_authenticated %}
                     <div class="navbar-collapse collapse">
                         <form class="navbar-form navbar-left" ng-submit="goto_search()">

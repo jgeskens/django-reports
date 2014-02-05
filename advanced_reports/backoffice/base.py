@@ -7,8 +7,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save, post_delete
-from django.http import Http404
-from django.http.response import HttpResponse
+from django.http import Http404, HttpResponse
 from django.shortcuts import render_to_response, get_object_or_404, redirect
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
@@ -631,12 +630,13 @@ class BackOfficeTab(object):
     template = None
     permission = None
 
-    def __init__(self, slug, title, template, permission=None, shadow=None):
+    def __init__(self, slug, title, template=None, permission=None, shadow=None, context=None):
         self.slug = slug
         self.title = title
         self.template = template
         self.shadow = shadow
         self.permission = permission
+        self.context = context or {}
 
     def get_serialized_meta(self):
         return {
@@ -646,17 +646,20 @@ class BackOfficeTab(object):
         }
 
     def get_serialized(self, request, instance):
+        context = {'instance': instance}
+        context.update(self.context)
+        template = self.template or 'advanced_reports/backoffice/default-tab.html'
         return {
             'slug': self.slug,
             'title': self.title,
-            'template': render_to_string(self.template, {'instance': instance},
+            'template': render_to_string(template, context,
                                          context_instance=RequestContext(request)) + random_token(),
             'shadow': self.shadow
         }
 
     def __repr__(self):
-        return 'BackOfficeTab(%r, %r, %r, permission=%r, shadow=%r)' \
-               % (self.slug, self.title, self.template, self.permission, self.shadow)
+        return 'BackOfficeTab(%r, %r, %r, permission=%r, shadow=%r, context=%r)' \
+               % (self.slug, self.title, self.template, self.permission, self.shadow, self.context)
 
 
 class BackOfficeModel(object):

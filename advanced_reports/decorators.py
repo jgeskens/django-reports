@@ -1,6 +1,4 @@
 from functools import wraps
-from django_delegation.decorators import delegate
-from django_delegation.utils import SimpleHTTPRequest
 
 try:
     from django.utils.timezone import now
@@ -16,6 +14,13 @@ def conditional_delegation(condition_func):
     def decorator(view_func):
         @wraps(view_func)
         def delegated_view(request, *args, **kwargs):
+            # Only do the actual delegation if the django-delegation library is installed.
+            try:
+                from django_delegation.decorators import delegate
+                from django_delegation.utils import SimpleHTTPRequest
+            except ImportError:
+                return view_func(request, *args, **kwargs)
+
             if not isinstance(request, SimpleHTTPRequest) and condition_func(request):
                 return delegate(view_func)(request, *args, **kwargs)
             return view_func(request, *args, **kwargs)

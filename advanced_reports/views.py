@@ -12,7 +12,6 @@ from django.utils.translation import ugettext as _
 from django.db import transaction
 
 from django_ajax.pagination import paginate
-from djprogress import with_progress, progress_error_reporter
 
 from advanced_reports import get_report_or_404
 from advanced_reports.backoffice.api_utils import JSONResponse
@@ -80,6 +79,10 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
 
         # CSV?
         if 'csv' in request.GET:
+            try:
+                from djprogress import with_progress
+            except ImportError:
+                with_progress = lambda it, **kw: it
             object_count = len(object_list)
             from cStringIO import StringIO
             #csv = StringIO()
@@ -100,9 +103,8 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
             response = HttpResponse('', 'text/csv')
             response['Content-Disposition'] = 'attachment; filename="%s.csv"' % advreport.slug
             response.write(header)
-            with progress_error_reporter():
-                for line in lines:
-                    response.write(line)
+            for line in lines:
+                response.write(line)
             return response
 
         # Paginate
