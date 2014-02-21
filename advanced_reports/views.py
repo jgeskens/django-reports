@@ -80,10 +80,11 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
 
         # CSV?
         if 'csv' in request.GET:
+            # Avoid microsoft SYLK problem http://support.microsoft.com/kb/215591
+            _mark_safe = lambda s: s if unicode(s) != u'ID' else unicode(s.lower())
             object_count = len(object_list)
-            from cStringIO import StringIO
             #csv = StringIO()
-            header = u'%s\n' % u';'.join(c['verbose_name'] for c in advreport.column_headers)
+            header = u'%s\n' % u';'.join(_mark_safe(c['verbose_name']) for c in advreport.column_headers)
             lines = (u'%s\n' % u';'.join((c['html'] for c in o.advreport_column_values)) \
                      for o in with_progress(object_list.iterator() \
                                                 if hasattr(object_list, 'iterator') \
@@ -208,7 +209,7 @@ def ajax(request, slug, method, object_id, param=None):
                 context.update({'response_method': method, 'response_form': a.form})
                 if a.form_template:
                     context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': a.form}))})
-                
+
                 return render_to_response(advreport.item_template, context, context_instance=RequestContext(request))
 
         except ActionException, e:
@@ -283,7 +284,7 @@ def ajax_form(request, slug, method, object_id, param=None):
             context.update({'response_method': method, 'response_form': a.form})
             if a.form_template:
                 context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': a.form, 'item': object}))})
-            
+
             return render_to_response(
                 'advanced_reports/ajax_form.html',
                 context,
