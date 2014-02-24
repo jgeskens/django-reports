@@ -81,7 +81,7 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
         # CSV?
         if 'csv' in request.GET:
             # Avoid microsoft SYLK problem http://support.microsoft.com/kb/215591
-            _mark_safe = lambda s: s if unicode(s) != u'ID' else unicode(s.lower())
+            _mark_safe = lambda s: s if unicode(s) != u'ID' else u'"%s"' % s
             object_count = len(object_list)
             #csv = StringIO()
             header = u'%s\n' % u';'.join(_mark_safe(c['verbose_name']) for c in advreport.column_headers)
