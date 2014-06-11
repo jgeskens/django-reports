@@ -10,7 +10,7 @@ setup(
     description="Advanced reports for Django",
     long_description=open('README.rst', 'r').read(),
     author='Jef Geskens, City Live nv',
-    packages=['advanced_reports'],
+    packages=find_packages('.'),
     package_data = {'advanced_reports': [
                 'static/*.js', 'static/*/*.js', 'static/*/*/*.js',
                 'static/*.css', 'static/*/*.css', 'static/*/*/*.css',
