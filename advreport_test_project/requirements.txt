@@ -1,0 +1,4 @@
+Django
+django-widget-tweaks
+-e git+git@github.com:vikingco/django-ajax-utilities.git#egg=django-ajax-utilities
+-e git+git@github.com:vikingco/django-progress.git#egg=django-progress
