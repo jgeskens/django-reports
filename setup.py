@@ -8,7 +8,7 @@ setup(
     url='https://github.com/citylive/django-advanced-reports',
     license='BSD',
     description="Advanced reports for Django",
-    long_description=open('README.rst', 'r').read(),
+    long_description=open('README.md', 'r').read(),
     author='Jef Geskens, City Live nv',
     packages=find_packages('.'),
     package_data = {'advanced_reports': [
