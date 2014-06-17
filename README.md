@@ -1,6 +1,8 @@
 Advanced Reports
 ================
 
+![image](https://travis-ci.org/jgeskens/django-advanced-reports.svg?branch=master)
+
 ![image](https://cloud.githubusercontent.com/assets/142114/3298713/8d550794-f605-11e3-845c-8953fc9ac00b.png)
 
 Introduction
