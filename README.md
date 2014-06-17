@@ -20,8 +20,3 @@ In addition to these features, Advanced Reports also contains a Backoffice compo
 * A very simple and flexible way to add widgets that communicate with the server-side backend.
 
 More information and examples are coming soon.
-
-About this branch
------------------
-
-This branch is an effort to clean up Advanced Reports and to open it up to the open source community. This way, it will be easier to enjoy the benefits of Advanced Reports in your own project, but also to allow you to contribute patches and pull requests. We took a lot of care into designing Advanced Reports, and want to share this to the world.
