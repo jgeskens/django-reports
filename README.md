@@ -1,6 +1,8 @@
 Advanced Reports
 ================
 
+![image](https://cloud.githubusercontent.com/assets/142114/3298713/8d550794-f605-11e3-845c-8953fc9ac00b.png)
+
 Introduction
 ------------
 
@@ -20,3 +22,4 @@ In addition to these features, Advanced Reports also contains a Backoffice compo
 * A very simple and flexible way to add widgets that communicate with the server-side backend.
 
 More information and examples are coming soon.
+
