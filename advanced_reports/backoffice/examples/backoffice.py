@@ -22,7 +22,7 @@ class TestBackOffice(BackOfficeBase):
         return (url(r'^page/$', self.page, name='page'),)
 
     def page(self, request):
-        return TemplateResponse(request, 'advanced_reports/backoffice/tests/page.html', {})
+        return TemplateResponse(request, 'advanced_reports/backoffice/tests/page.html', {'backoffice': self})
 
 
 class UserModel(BackOfficeModel):
