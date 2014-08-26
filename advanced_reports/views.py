@@ -31,7 +31,6 @@ def _get_redirect(advreport, next=None, querystring=None):
     return redirect(reverse('advanced_reports_list', kwargs={'slug': advreport.slug}) + suffix)
 
 @conditional_delegation(lambda request: 'delegate' in request.GET)
-@transaction.autocommit
 def list(request, slug, ids=None, internal_mode=False, report_header_visible=True):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -164,7 +163,6 @@ def action(request, slug, method, object_id, param=None):
     return inner(request, slug, method, object_id)
 
 
-@transaction.autocommit
 def ajax(request, slug, method, object_id, param=None):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -224,7 +222,6 @@ def ajax(request, slug, method, object_id, param=None):
     return inner(request, slug, method, object_id)
 
 
-@transaction.autocommit
 def count(request, slug):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -238,7 +235,6 @@ def count(request, slug):
     return inner(request, slug)
 
 
-@transaction.autocommit
 def ajax_form(request, slug, method, object_id, param=None):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -329,7 +325,6 @@ def _item_values(request, o, advreport):
 def _is_allowed_multiple_action(request, action):
     return not action.hidden and not action.form and action.multiple_display and action.is_allowed(request)
 
-@transaction.autocommit
 def api_list(request, slug, ids=None):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -362,7 +357,6 @@ def api_list(request, slug, ids=None):
     return inner(request, slug, ids)
 
 
-@transaction.autocommit
 def api_action(request, slug, method, object_id):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
