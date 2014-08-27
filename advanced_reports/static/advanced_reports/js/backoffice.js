@@ -790,3 +790,28 @@ app.directive('boParallax', function(){
         });
     };
 });
+
+app.directive('boPaginator', ['$timeout', function($timeout){
+    return {
+        template: '<ul class="pagination" ng-show="page_count > 1">' +
+            '<li ng-class="{disabled: page <= 1}"><a href ng-click="change_page(1)">&laquo;</a></li>' +
+            '<li ng-class="{disabled: page <= 1}"><a href ng-click="change_page(page-1)">&lt;</a></li>' +
+            '<li><a href>{{ page }} / {{ page_count }}</a></li>' +
+            '<li ng-class="{disabled: page >= page_count}"><a href ng-click="change_page(page+1)">&gt;</a></li>' +
+            '<li ng-class="{disabled: page >= page_count}"><a href ng-click="change_page(page_count)">&raquo;</a></li>' +
+            '</ul>',
+        link: function(scope, element, attrs){
+            scope.change_page = function(new_page) {
+                if (new_page >= 1 && new_page <= scope.page_count) {
+                    scope.page = new_page;
+                    $timeout(function(){
+                        scope.on_change();
+                    });
+                }
+            };
+        },
+        replace: true,
+        restrict: 'EA',
+        scope: {page: '=', page_count: '=pageCount', on_change: '&onChange'}
+    };
+}]);
