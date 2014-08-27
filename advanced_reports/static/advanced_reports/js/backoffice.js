@@ -804,6 +804,10 @@ app.directive('boPaginator', ['$timeout', function($timeout){
             scope.change_page = function(new_page) {
                 if (new_page >= 1 && new_page <= scope.page_count) {
                     scope.page = new_page;
+                    // I have done this because otherwise it will call 
+                    // the on_change event too early, before the 
+                    // scope: {} magic stuff gets the chance to update
+                    // the actual view params.
                     $timeout(function(){
                         scope.on_change();
                     });
