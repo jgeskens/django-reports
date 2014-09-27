@@ -37,7 +37,7 @@
         {% include "advanced_reports/backoffice/search.html" %}
         {% include "advanced_reports/backoffice/modal.html" %}
 
-        <div class="overlay-loading" ng-show2="isLoadingSlow()" ng-show="false">
+        <div class="overlay-loading" ng-show="isLoadingSlow()">
             <div>
                 {% trans "Loading... One moment..." %}
             </div>
@@ -135,10 +135,9 @@
 
         <footer>
             <div class="container">
-                {% block footer %}Nothing else to show...{% endblock %}
-            </div>
-            <div class="container">
-                &copy; VikingCo | All rights reserved
+                {% with '<a href="https://github.com/vikingco/django-advanced-reports">Advanced Reports</a>' as advreports_github_url %}
+                    {% blocktrans %}Proudly powered by {{ advreports_github_url }}{% endblocktrans %}
+                {% endwith %}
             </div>
         </footer>
 

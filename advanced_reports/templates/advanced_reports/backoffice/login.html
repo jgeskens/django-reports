@@ -11,7 +11,7 @@
         </div>
     </header>
 
-    <form class="form-signin form-horizontal" role="form"
+    <form class="form-signin form-horizontal custom-styling" role="form"
             action="{{ request.path }}" method="post" id="login-form">
 
         {% csrf_token %}
@@ -24,7 +24,7 @@
                     <h2>{% trans "Please sign in" %}</h2>
 
                     <p class="introduction">
-                        {% blocktrans %}To get the full experience to our awesome helpdesk, please sign in!{% endblocktrans %}
+                        {% blocktrans %}Before continuing, we want you to authenticate yourself.{% endblocktrans %}
                     </p>
 
                     {% include "advanced_reports/backoffice/contrib/advanced-reports/bootstrap-form.html" %}

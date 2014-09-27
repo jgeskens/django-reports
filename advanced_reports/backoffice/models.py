@@ -22,5 +22,9 @@ class SearchIndex(models.Model):
                             search_field='search_index',
                             auto_update_search_field=True)
 
+    class Meta:
+        verbose_name = u'search index entry'
+        verbose_name_plural = u'search index entries'
+
     def __unicode__(self):
         return u'%s/%s/%d' % (self.backoffice_instance, self.model_slug, self.model_id)

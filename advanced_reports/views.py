@@ -30,7 +30,6 @@ def _get_redirect(advreport, next=None, querystring=None):
     return redirect(reverse('advanced_reports_list', kwargs={'slug': advreport.slug}) + suffix)
 
 @conditional_delegation(lambda request: 'delegate' in request.GET)
-@transaction.autocommit
 def list(request, slug, ids=None, internal_mode=False, report_header_visible=True):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -83,10 +82,11 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
                 from djprogress import with_progress
             except ImportError:
                 with_progress = lambda it, **kw: it
+            # Avoid microsoft SYLK problem http://support.microsoft.com/kb/215591
+            _mark_safe = lambda s: s if unicode(s) != u'ID' else u'"%s"' % s
             object_count = len(object_list)
-            from cStringIO import StringIO
             #csv = StringIO()
-            header = u'%s\n' % u';'.join(c['verbose_name'] for c in advreport.column_headers)
+            header = u'%s\n' % u';'.join(_mark_safe(c['verbose_name']) for c in advreport.column_headers)
             lines = (u'%s\n' % u';'.join((c['html'] for c in o.advreport_column_values)) \
                      for o in with_progress(object_list.iterator() \
                                                 if hasattr(object_list, 'iterator') \
@@ -165,7 +165,6 @@ def action(request, slug, method, object_id, param=None):
     return inner(request, slug, method, object_id)
 
 
-@transaction.autocommit
 def ajax(request, slug, method, object_id, param=None):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -210,7 +209,7 @@ def ajax(request, slug, method, object_id, param=None):
                 context.update({'response_method': method, 'response_form': a.form})
                 if a.form_template:
                     context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': a.form}))})
-                
+
                 return render_to_response(advreport.item_template, context, context_instance=RequestContext(request))
 
         except ActionException, e:
@@ -225,7 +224,6 @@ def ajax(request, slug, method, object_id, param=None):
     return inner(request, slug, method, object_id)
 
 
-@transaction.autocommit
 def count(request, slug):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -239,7 +237,6 @@ def count(request, slug):
     return inner(request, slug)
 
 
-@transaction.autocommit
 def ajax_form(request, slug, method, object_id, param=None):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -285,7 +282,7 @@ def ajax_form(request, slug, method, object_id, param=None):
             context.update({'response_method': method, 'response_form': a.form})
             if a.form_template:
                 context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': a.form, 'item': object}))})
-            
+
             return render_to_response(
                 'advanced_reports/ajax_form.html',
                 context,
@@ -302,11 +299,15 @@ def ajax_form(request, slug, method, object_id, param=None):
     return inner(request, slug, method, object_id)
 
 
-def _action_dict(o, action):
+def _action_dict(request, o, action):
     d = dict(action.attrs_dict)
     if action.form:
         form_instance = action.form
-        d['form'] = action.form_template and render_to_string(action.form_template, {'form': form_instance, 'item': o}) or unicode(form_instance)
+        d['form'] = action.form_template \
+                        and render_to_string(action.form_template,
+                                             {'form': form_instance, 'item': o},
+                                             context_instance=RequestContext(request)) \
+            or unicode(form_instance)
     if action.confirm:
         context = {'item': o}
         context.update(o.__dict__)
@@ -314,11 +315,11 @@ def _action_dict(o, action):
     return d
 
 
-def _item_values(o, advreport):
+def _item_values(request, o, advreport):
     return {
         'values': o.advreport_column_values,
         'extra_information': o.advreport_extra_information.replace('data-method="', 'ng-bind-html-unsafe="lazydiv__%s__' % advreport.get_item_id(o)),
-        'actions': [_action_dict(o, a) for a in o.advreport_actions],
+        'actions': [_action_dict(request, o, a) for a in o.advreport_actions],
         'item_id': advreport.get_item_id(o)
     }
 
@@ -326,7 +327,6 @@ def _item_values(o, advreport):
 def _is_allowed_multiple_action(request, action):
     return not action.hidden and not action.form and action.multiple_display and action.is_allowed(request)
 
-@transaction.autocommit
 def api_list(request, slug, ids=None):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -339,7 +339,7 @@ def api_list(request, slug, ids=None):
         report = {
             'header': advreport.column_headers,
             'extra': extra_context,
-            'items': [_item_values(o, advreport) for o in paginated.object_list[:]],
+            'items': [_item_values(request, o, advreport) for o in paginated.object_list[:]],
             'items_per_page': advreport.items_per_page,
             'item_count': len(object_list),
             'searchable_columns': advreport.searchable_columns,
@@ -359,7 +359,6 @@ def api_list(request, slug, ids=None):
     return inner(request, slug, ids)
 
 
-@transaction.autocommit
 def api_action(request, slug, method, object_id):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -390,7 +389,7 @@ def api_action(request, slug, method, object_id):
                         context.update({'response_form': render_to_string(a.form_template, {'form': form, 'item': obj})})
                 if obj:
                     advreport.enrich_object(obj, request=request)
-                    context.update({'item': _item_values(obj, advreport)})
+                    context.update({'item': _item_values(request, obj, advreport)})
                 else:
                     context.update({'item': None, 'removed_item_id': object_id})
                 return JSONResponse(context)
@@ -402,7 +401,7 @@ def api_action(request, slug, method, object_id):
                 obj = advreport.get_item_for_id(object_id)
                 if obj:
                     advreport.enrich_object(obj, request=request)
-                    context = {'item': _item_values(obj, advreport), 'success': a.get_success_message()}
+                    context = {'item': _item_values(request, obj, advreport), 'success': a.get_success_message()}
                 else:
                     context = {'item': None, 'success': a.get_success_message(), 'removed_item_id': object_id}
                 return JSONResponse(context)
