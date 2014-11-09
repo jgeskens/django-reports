@@ -237,14 +237,27 @@ angular.module('BackOfficeApp')
         }
     };
 
+    $scope.fetch_form = function(item, action){
+        $scope.view.action('form', {method: action.method, pk: item.item_id}, false).then(function(data){
+            action.form = data;
+            $scope.form = action;
+            $scope.form.item = item;
+            $scope.action_form_popup.modal('show');
+        }, function(error){});
+    };
+
     $scope.execute_action = function(item, action, force){
         if ($scope.is_link_action(action))
             return;
 
         if (action.form){
-            $scope.form = action;
-            $scope.form.item = item;
-            $scope.action_form_popup.modal('show');
+            if (action.form === true){
+                $scope.fetch_form(item, action);
+            } else {
+                $scope.form = action;
+                $scope.form.item = item;
+                $scope.action_form_popup.modal('show');
+            }
         } else {
             var execute = function(){
                 $scope.view.action('action', {method: action.method, pk: item.item_id}, false).then(function(data){

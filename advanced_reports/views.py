@@ -249,7 +249,7 @@ def ajax_form(request, slug, method, object_id, param=None):
             # No appropriate action found (maybe it was filtered out?)
             raise Http404
 
-        context = {'advreport':advreport}
+        context = {'advreport': advreport}
 
         if request.method == 'POST' and a.form is not None:
             if issubclass(a.form, forms.ModelForm):
@@ -291,7 +291,33 @@ def ajax_form(request, slug, method, object_id, param=None):
         else:
             raise Http404
 
-        context = {'advreport': advreport}
+    if advreport.decorate_views:
+        inner = advreport.get_decorator()(inner)
+
+    return inner(request, slug, method, object_id)
+
+
+def api_form(request, slug, method, object_id):
+    advreport = get_report_or_404(slug)
+    advreport.set_request(request)
+
+    def inner(request, slug, method, object_id):
+        object = advreport.get_item_for_id(object_id)
+        advreport.enrich_object(object, request=request)
+        a = advreport.find_object_action(object, method)
+        if a is None or not a.form:
+            # No appropriate action found (maybe it was filtered out?)
+            raise Http404
+        instance = a.get_form_instance(advreport.get_item_for_id(object_id))
+        a = a.copy_with_instanced_form(prefix=object_id, instance=instance)
+
+        form_instance = a.form
+        rendered_form = a.form_template \
+                        and render_to_string(a.form_template,
+                                             {'form': form_instance, 'item': instance},
+                                             context_instance=RequestContext(request)) \
+            or unicode(form_instance)
+        return HttpResponse(rendered_form)
 
     if advreport.decorate_views:
         inner = advreport.get_decorator()(inner)
@@ -302,12 +328,15 @@ def ajax_form(request, slug, method, object_id, param=None):
 def _action_dict(request, o, action):
     d = dict(action.attrs_dict)
     if action.form:
-        form_instance = action.form
-        d['form'] = action.form_template \
-                        and render_to_string(action.form_template,
-                                             {'form': form_instance, 'item': o},
-                                             context_instance=RequestContext(request)) \
-            or unicode(form_instance)
+        if not action.prefetch_ajax_form and action.form_via_ajax:
+            d['form'] = True
+        else:
+            form_instance = action.form
+            d['form'] = action.form_template \
+                            and render_to_string(action.form_template,
+                                                 {'form': form_instance, 'item': o},
+                                                 context_instance=RequestContext(request)) \
+                or unicode(form_instance)
     if action.confirm:
         context = {'item': o}
         context.update(o.__dict__)
