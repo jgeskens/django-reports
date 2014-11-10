@@ -5,11 +5,11 @@ import advanced_reports
 setup(
     name="django-advanced-reports",
     version=advanced_reports.__version__,
-    url='https://github.com/citylive/django-advanced-reports',
+    url='https://github.com/vikingco/django-advanced-reports',
     license='BSD',
     description="Advanced reports for Django",
     long_description=open('README.md', 'r').read(),
-    author='Jef Geskens, City Live nv',
+    author='Jef Geskens, VikingCo nv',
     packages=find_packages('.'),
     package_data = {'advanced_reports': [
                 'static/*.js', 'static/*/*.js', 'static/*/*/*.js',
