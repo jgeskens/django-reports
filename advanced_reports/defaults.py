@@ -69,7 +69,7 @@ class action(object):
     Optional. If True, the form will be shown in a popup.
     '''
 
-    prefetch_ajax_form = True
+    prefetch_ajax_form = False
     '''
     Optional. If False, the form will not be loaded together with the item, but later. Only applies when
     form_via_ajax is True.
@@ -188,7 +188,9 @@ class action(object):
             kwargs.pop('param')
         
         if self.form_instance:
-            return self.form_instance(instance, *args, **kwargs) if callable(self.form_instance) else form_instance
+            return self.form_instance(instance, *args, **kwargs) \
+                if callable(self.form_instance) \
+                else self.form_instance
         return instance
 
     def is_allowed(self, request):

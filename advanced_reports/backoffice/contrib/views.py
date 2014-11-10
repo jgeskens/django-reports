@@ -8,7 +8,7 @@ from django.utils.translation import ugettext as _
 from advanced_reports.backoffice.base import BackOfficeView
 from advanced_reports import get_report_for_slug
 from advanced_reports.defaults import ActionException
-from advanced_reports.views import api_list, api_action
+from advanced_reports.views import api_list, api_action, api_form
 
 
 class AdvancedReportView(BackOfficeView):
@@ -36,6 +36,12 @@ class AdvancedReportView(BackOfficeView):
         obj_id = request.view_params.get('pk', None)
         ids = [obj_id] if obj_id else None
         return api_list(request, request.view_params.get('slug'), ids=ids)
+
+    def form(self, request):
+        method = request.action_params.get('method')
+        pk = request.action_params.get('pk')
+        slug = request.view_params.get('slug')
+        return api_form(request, slug, method, int(pk))
 
     def action(self, request):
         method = request.action_params.get('method')
