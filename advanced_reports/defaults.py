@@ -13,7 +13,7 @@ from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
-
+from django.forms.models import fields_for_model
 
 class ActionType(object):
     LINKS = 'links'
@@ -598,7 +598,44 @@ class AdvancedReport(object):
         Implement this to define some extra context for your template,
         based on the request.
         '''
-        return {}
+        return {
+            'filters_form': self.get_filter_form()(request.GET or None)
+        }
+
+    def _create_choicefield(self, choices, add_empty=False):
+        if add_empty and len(choices) and choices[0][0] != '':
+            choices = [('', '---')] + list(choices)
+        return forms.ChoiceField(choices=choices)
+
+    def get_filter_form(self):
+        """
+        Ugly way to generate generic form for filters- but I can't see better idea, how to do this
+        """
+        all_model_fields = {}
+        for model in self.models:
+            all_model_fields.update(fields_for_model(model))
+        report = self
+        class DynamicForm(forms.Form):
+            def __init__(self, *args, **kwargs):
+                super(DynamicForm, self).__init__(*args, **kwargs)
+                for filter_field in report.filter_fields:
+                    field_fn = getattr(self, 'get_%s_filter' % filter_field, None)
+                    if field_fn is not None:
+                        self.fields[filter_field] = field_fn()
+                    elif filter_field in report.filter_values:
+                        self.fields[filter_field] = report._create_choicefield(report.filter_values[filter_field], True)
+                    elif filter_field in all_model_fields:
+                        self.fields[filter_field] = report._create_choicefield(all_model_fields[filter_field].choices, True)
+                    else:
+                        raise ValueError("We can't get choices for %s filter" % filter_field)
+        return DynamicForm
+
+    def get_filters_from_request(self, request):
+        result = {}
+        for filter_field in self.filter_fields:
+            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip():
+                result[filter_field] = request.REQUEST[filter_field]
+        return result
 
     def get_filtered_items(self, queryset, params, request=None):
         filter_query = None
@@ -613,6 +650,8 @@ class AdvancedReport(object):
         to_date = params.get('to', '')
         from_date_struct = time.strptime(params['from'], '%Y-%m-%d') if from_date else None
         to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
+
+        queryset = queryset.filter(**self.get_filters_from_request(request))
 
         if from_date_struct and to_date_struct:
             date_range_query = Q()
