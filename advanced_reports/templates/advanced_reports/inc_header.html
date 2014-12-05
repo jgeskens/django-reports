@@ -57,7 +57,6 @@
                 <label for="search_field"><strong>{% trans "Search" %}:</strong></label>
                 <input type="text" id="search_field" name="q" value="{{ request.GET.q }}" title="{{ advreport.searchable_columns }}" />
                 <label><input type="checkbox" name="exact" {% if request.GET.exact %}checked="checked"{% endif %}/> {% trans "exact" %}</label>
-                <input type="submit" value="{% trans "Go" %}" />
                 {% if request.GET.q or request.GET.to %}
                     <a href=".">{% trans "show all" %}</a>
                 {% endif %}
@@ -79,7 +78,6 @@
                         <td><input type="text" id="to_field" name="to" value="{{ request.GET.to }}" class="date_range" /></td>
 
                         <td>
-                            <input type="submit" value="{% trans "Search" %}" />
                             {% if request.GET.q or request.GET.to %}
                                 <a href=".">{% trans "show all" %}</a>
                             {% endif %}
@@ -94,10 +92,10 @@
             {% for field in filters_form %}
             {{ field.label }}: {{ field }}
             {% endfor %}
-            <input type="submit" value="{% trans "Go" %}" />
+
         </div>
         {% endif %}
-
+        <input type="submit" value="{% trans "Search" %}" />
     </form>
 
 {% endif %}
