@@ -7,7 +7,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.http import Http404
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
