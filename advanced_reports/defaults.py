@@ -248,6 +248,15 @@ class AdvancedReport(object):
     Optional. A tuple of fields that can be filtered.
     '''
 
+    tabbed_filter_fields = ()
+    '''
+    Optional. A dictionary with fields that will be shown as tabs. 1st dict field has to be the field to filter on.
+    2nd dict field is a dict with a options:
+        - `types`: types to filter on.
+        - `images` (optional): `default` will be used for all other fields, use same name as defined in `types` to
+        provide a `type` specific image.
+    '''
+
     filter_values = {}
     '''
     Optional. A mapping of filter fields to their list of values.
@@ -598,7 +607,8 @@ class AdvancedReport(object):
         based on the request.
         '''
         return {
-            'filters_form': self.get_filter_form()(request.GET or None)
+            'filters_form': self.get_filter_form()(request.GET or None),
+            'tabbed_filters_links': self.get_tabbed_filter_links(),
         }
 
     def _create_choicefield(self, choices, add_empty=False):
@@ -628,6 +638,56 @@ class AdvancedReport(object):
                     else:
                         raise ValueError("We can't get choices for %s filter" % filter_field)
         return DynamicForm
+
+    def get_tabbed_filter_links(self):
+        """
+        Example:
+            configured in report:
+
+                tabbed_filter_fields = (
+                    {
+                        'card': {
+                            'images': {
+                                'default': 'default.png',
+                                '2FF': '2ff-image.img',
+                            },
+                            'types': [
+                                '2FF', '2FF/3FF', '2/3/4FF', '4FF'
+                            ]
+                        }
+                    })
+
+            will result in (keys are slugified, so 2FF/3FF will be 2ff3ff):
+
+                [
+                    'card': [
+                        {'2FF': '2ff-image.png'},
+                        {'2FF/3FF', 'default.png'},
+                    ],
+                ]
+
+        @return a dict for links with optional images.
+        """
+        report = self
+        result = {}
+        for filter_field in report.tabbed_filter_fields:
+            options = report.tabbed_filter_fields[filter_field]
+            if not options or options == {} or 'types' not in options:
+                raise Exception('Cannot construct tabbed filter fields!')
+
+            values = {}
+            for field_type in options['types']:
+                if 'images' in options.keys():
+                    if field_type in options['images']:
+                        values.update({field_type: options['images'][field_type]})
+                    elif 'default' in options['images'].keys():
+                        values.update({field_type: options['images']['default']})
+                    else:
+                        values.update({field_type: None})
+                else:
+                    values.update({field_type: None})
+            result.update({filter_field: values.iteritems()})
+        return result.iteritems()
 
     def get_filters_from_request(self, request):
         result = {}

@@ -43,7 +43,7 @@
 </div>
 {% endif %}
 
-{% if advreport.search_fields or advreport.filter_fields %}
+{% if advreport.search_fields or advreport.filter_fields or advreport.tabbed_filter_fields %}
 
     <form method="get" action="{{ request.path }}">
         {% for rv in request.GET.items %}
@@ -51,6 +51,18 @@
                 <input type="hidden" name="{{ rv.0 }}" value="{{ rv.1 }}" />
             {% endif %}
         {% endfor %}
+
+        {% if advreport.tabbed_filter_fields %}
+            {% for filter_field, field_items in tabbed_filters_links %}
+                {% for field, image in field_items %}
+                    {% if forloop.first %}<div class="tabbing-tabs"><ul>{% endif %}
+                        <li {% if request.GET.tab_type == filter_field|add:'_'|add:field %} class="selected"{% endif %}>
+                            <a href="{{ request.path }}?tab_type={{ filter_field }}_{{ field }}">{% if image %}<img src="{{ image }}"/> {% endif %}{{ field }}</a>
+                        </li>
+                    {% if forloop.last %}</ul></div>{% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
 
         {% if not advreport.date_range %}
             <div class="bar">
