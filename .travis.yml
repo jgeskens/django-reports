@@ -6,5 +6,5 @@ install:
   - python setup.py develop
 script:
   - cd advreport_test_project
-  - python manage.py test
+  - python manage.py test advanced_reports
 
