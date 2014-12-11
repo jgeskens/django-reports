@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
+from django.utils.datastructures import SortedDict
 from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
@@ -669,24 +670,24 @@ class AdvancedReport(object):
         @return a dict for links with optional images.
         """
         report = self
-        result = {}
+        result = SortedDict()
         for filter_field in report.tabbed_filter_fields:
             options = report.tabbed_filter_fields[filter_field]
             if not options or options == {} or 'types' not in options:
                 raise Exception('Cannot construct tabbed filter fields!')
 
-            values = {}
+            values = SortedDict()
             for field_type in options['types']:
-                if 'images' in options.keys():
+                if 'images' in options:
                     if field_type in options['images']:
-                        values.update({field_type: options['images'][field_type]})
+                        values[field_type] = options['images'][field_type]
                     elif 'default' in options['images'].keys():
-                        values.update({field_type: options['images']['default']})
+                        values[field_type] = options['images']['default']
                     else:
-                        values.update({field_type: None})
+                        values[field_type] = None
                 else:
-                    values.update({field_type: None})
-            result.update({filter_field: values.iteritems()})
+                    values[field_type] = None
+            result[filter_field] = values.items()
         return result.iteritems()
 
     def get_filters_from_request(self, request):
