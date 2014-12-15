@@ -157,16 +157,21 @@ class action(object):
             setattr(self, k, kwargs[k])
             self.attrs_dict[k] = kwargs[k]
 
-    def copy_with_instanced_form(self, prefix, instance=None, data=None):
+    def copy_with_instanced_form(self, advreport, prefix, instance=None, data=None):
         new_action = action(**self.attrs_dict)
-        if self.form is not None:
+        dynamic_form = getattr(advreport, 'get_%s_form' % new_action.method, None)
+
+        if dynamic_form is not None and callable(dynamic_form):
+            new_action.form = dynamic_form(instance, prefix, data=data)
+
+        elif self.form is not None:
             new_action.form = self.form
             if issubclass(self.form, forms.ModelForm):
                 new_action.form = self.form(data=data, prefix=prefix, instance=instance)
             else:
                 new_action.form = self.form(data=data, prefix=prefix)
 
-            #if self.form_template:
+        if new_action.form is not None:
             new_action.form_template = self.form_template # mark_safe(render_to_string(self.form_template, {'form': new_action.form}))
             if self.form_template:
                 new_action.response_form_template = mark_safe(render_to_string(self.form_template, {'form': new_action.form, 'item': instance}))
@@ -494,6 +499,17 @@ class AdvancedReport(object):
         The implementation of the FOO action method with multiple items.
         This may return a HttpResponse object or just None.
         '''
+        return None
+
+    def get_FOO_form(self, item, prefix, data=None):
+        """
+        Instead of specifying the ``form`` attribute for an action, you can also construct your
+        action form instance dynamically by implementing this method in your report.
+        :param item: the item for which to construct the action form
+        :param prefix: the prefix that the form should use
+        :param data: the data that should be passed to the form for validation
+        :return: a form instance
+        """
         return None
 
     def get_item_class(self, item):
@@ -973,7 +989,7 @@ class AdvancedReport(object):
                     (not request or a.is_allowed(request)):
                 instance = a.form_instance(object) if a.form_instance else object
                 if not a.form_via_ajax or a.prefetch_ajax_form:
-                    new_action = a.copy_with_instanced_form(prefix=self.get_item_id(object), instance=instance)
+                    new_action = a.copy_with_instanced_form(self, prefix=self.get_item_id(object), instance=instance)
                 else:
                     # Put off fetching the instanced Form until the actual Ajax
                     # call for performance.
@@ -1004,7 +1020,7 @@ class AdvancedReport(object):
 
     def get_empty_text(self):
         if self.empty_text:
-            return empty_text
+            return self.empty_text
         return _(u'There are no %(items)s to display.') % {'items': self.verbose_name_plural}
 
     def assign_attr(self, object, attr_name, value):

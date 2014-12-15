@@ -251,12 +251,12 @@ def ajax_form(request, slug, method, object_id, param=None):
 
         context = {'advreport': advreport}
 
-        if request.method == 'POST' and a.form is not None:
-            if issubclass(a.form, forms.ModelForm):
-                form = a.form(request.POST, request.FILES, instance=a.get_form_instance(object, param=param), prefix=object_id)
-            else:
-                form = a.form(request.POST, request.FILES, prefix=object_id)
-
+        if request.method == 'POST':
+            a = a.copy_with_instanced_form(advreport,
+                                           prefix=object_id,
+                                           instance=a.get_form_instance(object, param=param),
+                                           data=request.POST)
+            form = a.form
             if form.is_valid():
                 r = advreport.get_action_callable(a.method)(object, form)
                 object = advreport.get_item_for_id(object_id)
@@ -275,8 +275,8 @@ def ajax_form(request, slug, method, object_id, param=None):
             context.update({'object': object, 'action': a})
             return render_to_response('advanced_reports/ajax_form.html', context, context_instance=RequestContext(request))
 
-        elif a.form:
-            a = a.copy_with_instanced_form(prefix=object_id, instance=a.get_form_instance(advreport.get_item_for_id(object_id), param=param))
+        else:
+            a = a.copy_with_instanced_form(advreport, prefix=object_id, instance=a.get_form_instance(advreport.get_item_for_id(object_id), param=param))
             context = {'object': object, 'advreport': advreport, 'success': a.get_success_message(), 'action': a}
 
             context.update({'response_method': method, 'response_form': a.form})
@@ -288,8 +288,6 @@ def ajax_form(request, slug, method, object_id, param=None):
                 context,
                 context_instance=RequestContext(request)
             )
-        else:
-            raise Http404
 
     if advreport.decorate_views:
         inner = advreport.get_decorator()(inner)
@@ -318,6 +316,7 @@ def api_form(request, slug, method, object_id):
                                              context_instance=RequestContext(request)) \
             or unicode(form_instance)
         return HttpResponse(rendered_form)
+
 
     if advreport.decorate_views:
         inner = advreport.get_decorator()(inner)
