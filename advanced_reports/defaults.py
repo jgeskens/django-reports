@@ -7,13 +7,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
-from django.http import Http404
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
+from django.utils.datastructures import SortedDict
 from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
-
+from django.forms.models import fields_for_model
 
 class ActionType(object):
     LINKS = 'links'
@@ -252,6 +252,15 @@ class AdvancedReport(object):
     filter_fields = ()
     '''
     Optional. A tuple of fields that can be filtered.
+    '''
+
+    tabbed_filter_fields = ()
+    '''
+    Optional. A dictionary with fields that will be shown as tabs. 1st dict field has to be the field to filter on.
+    2nd dict field is a dict with a options:
+        - `types`: types to filter on.
+        - `images` (optional): `default` will be used for all other fields, use same name as defined in `types` to
+        provide a `type` specific image.
     '''
 
     filter_values = {}
@@ -614,7 +623,95 @@ class AdvancedReport(object):
         Implement this to define some extra context for your template,
         based on the request.
         '''
-        return {}
+        return {
+            'filters_form': self.get_filter_form()(request.GET or None),
+            'tabbed_filters_links': self.get_tabbed_filter_links(),
+        }
+
+    def _create_choicefield(self, choices, add_empty=False):
+        if add_empty and len(choices) and choices[0][0] != '':
+            choices = [('', '---')] + list(choices)
+        return forms.ChoiceField(choices=choices)
+
+    def get_filter_form(self):
+        """
+        Ugly way to generate generic form for filters- but I can't see better idea, how to do this
+        """
+        all_model_fields = {}
+        for model in self.models:
+            all_model_fields.update(fields_for_model(model))
+        report = self
+        class DynamicForm(forms.Form):
+            def __init__(self, *args, **kwargs):
+                super(DynamicForm, self).__init__(*args, **kwargs)
+                for filter_field in report.filter_fields:
+                    field_fn = getattr(self, 'get_%s_filter' % filter_field, None)
+                    if field_fn is not None:
+                        self.fields[filter_field] = field_fn()
+                    elif filter_field in report.filter_values:
+                        self.fields[filter_field] = report._create_choicefield(report.filter_values[filter_field], True)
+                    elif filter_field in all_model_fields:
+                        self.fields[filter_field] = report._create_choicefield(all_model_fields[filter_field].choices, True)
+                    else:
+                        raise ValueError("We can't get choices for %s filter" % filter_field)
+        return DynamicForm
+
+    def get_tabbed_filter_links(self):
+        """
+        Example:
+            configured in report:
+
+                tabbed_filter_fields = (
+                    {
+                        'card': {
+                            'images': {
+                                'default': 'default.png',
+                                '2FF': '2ff-image.img',
+                            },
+                            'types': [
+                                '2FF', '2FF/3FF', '2/3/4FF', '4FF'
+                            ]
+                        }
+                    })
+
+            will result in (keys are slugified, so 2FF/3FF will be 2ff3ff):
+
+                [
+                    'card': [
+                        {'2FF': '2ff-image.png'},
+                        {'2FF/3FF', 'default.png'},
+                    ],
+                ]
+
+        @return a dict for links with optional images.
+        """
+        report = self
+        result = SortedDict()
+        for filter_field in report.tabbed_filter_fields:
+            options = report.tabbed_filter_fields[filter_field]
+            if not options or options == {} or 'types' not in options:
+                raise Exception('Cannot construct tabbed filter fields!')
+
+            values = SortedDict()
+            for field_type in options['types']:
+                if 'images' in options:
+                    if field_type in options['images']:
+                        values[field_type] = options['images'][field_type]
+                    elif 'default' in options['images'].keys():
+                        values[field_type] = options['images']['default']
+                    else:
+                        values[field_type] = None
+                else:
+                    values[field_type] = None
+            result[filter_field] = values.items()
+        return result.iteritems()
+
+    def get_filters_from_request(self, request):
+        result = {}
+        for filter_field in self.filter_fields:
+            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip():
+                result[filter_field] = request.REQUEST[filter_field]
+        return result
 
     def get_filtered_items(self, queryset, params, request=None):
         filter_query = None
@@ -629,6 +726,8 @@ class AdvancedReport(object):
         to_date = params.get('to', '')
         from_date_struct = time.strptime(params['from'], '%Y-%m-%d') if from_date else None
         to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
+
+        queryset = queryset.filter(**self.get_filters_from_request(request))
 
         if from_date_struct and to_date_struct:
             date_range_query = Q()
