@@ -307,7 +307,7 @@ def api_form(request, slug, method, object_id):
             # No appropriate action found (maybe it was filtered out?)
             raise Http404
         instance = a.get_form_instance(advreport.get_item_for_id(object_id))
-        a = a.copy_with_instanced_form(prefix=object_id, instance=instance)
+        a = a.copy_with_instanced_form(advreport, prefix=object_id, instance=instance)
 
         form_instance = a.form
         rendered_form = a.form_template \

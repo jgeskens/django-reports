@@ -10,6 +10,7 @@ import advanced_reports
 
 
 from advanced_reports.backoffice.examples.reports import UserReport, UserForm
+from advanced_reports.backoffice.examples.views import SimpleView
 
 
 class TestBackOffice(BackOfficeBase):
@@ -76,5 +77,6 @@ test_backoffice = TestBackOffice()
 test_backoffice.register_model(UserModel)
 test_backoffice.register_view(AdvancedReportView)
 test_backoffice.register_view(UserView)
+test_backoffice.register_view(SimpleView)
 
 advanced_reports.register(UserReport)

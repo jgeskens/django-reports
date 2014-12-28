@@ -8,7 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save, post_delete
 from django.http import Http404, HttpResponse
-from django.shortcuts import render_to_response, get_object_or_404, redirect
+from django.shortcuts import render_to_response, get_object_or_404, redirect, render
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
 from django.views.decorators.cache import never_cache
@@ -53,6 +53,12 @@ class AutoSlug(object):
         if self.remove_suffix and slug.endswith(self.remove_suffix):
             slug = slug[:-len(self.remove_suffix)]
         return slug.lower()
+
+
+class AutoTemplate(AutoSlug):
+    def __get__(self, instance, owner):
+        slug = super(AutoTemplate, self).__get__(instance, owner)
+        return u'advanced_reports/backoffice/views/{}.html'.format(slug)
 
 
 class BackOfficeBase(object):
@@ -901,6 +907,7 @@ class BackOfficeModel(object):
 
 class BackOfficeView(object):
     slug = AutoSlug(remove_suffix='View')
+    template = AutoTemplate(remove_suffix='View')
 
     permission = None
 
@@ -933,7 +940,7 @@ class BackOfficeView(object):
         return self.serialize_view_result(request, self.post(request))
 
     def get(self, request):
-        raise NotImplementedError
+        return render(request, self.template, {'view_slug': self.slug})
 
     def post(self, request):
         raise NotImplementedError

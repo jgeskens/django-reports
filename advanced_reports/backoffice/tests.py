@@ -6,14 +6,14 @@ from advanced_reports.backoffice.examples.backoffice import test_backoffice
 
 class BackOfficeBackend(TestCase):
     def setUp(self):
-        User.objects.create(username='admin',
-                            password='admin',
-                            first_name='Admin',
-                            last_name='User',
-                            email='admin@example.com',
-                            is_active=True,
-                            is_staff=True,
-                            is_superuser=True)
+        User.objects.get_or_create(username='admin',
+                                   password='admin',
+                                   first_name='Admin',
+                                   last_name='User',
+                                   email='admin@example.com',
+                                   is_active=True,
+                                   is_staff=True,
+                                   is_superuser=True)
 
         self.client.login(username='admin', password='admin')
         self.home_url = reverse(test_backoffice.name + ':home', current_app=test_backoffice.app_name)
@@ -31,4 +31,3 @@ class BackOfficeBackend(TestCase):
     def test_home_view(self):
         response = self.client.get(self.home_url)
         self.assertEqual(response.status_code, 200)
-
