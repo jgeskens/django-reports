@@ -1,7 +1,7 @@
 Advanced Reports
 ================
 
-[![image](https://travis-ci.org/vikingco/django-advanced-reports.svg?branch=master)](https://travis-ci.org/vikingco/django-advanced-reports)
+[![image](https://travis-ci.org/vikingco/django-advanced-reports.svg?branch=master)](https://travis-ci.org/vikingco/django-advanced-reports) [![wercker status](https://app.wercker.com/status/83e5295d0d44e6f64c714153a4538a02/s "wercker status")](https://app.wercker.com/project/bykey/83e5295d0d44e6f64c714153a4538a02)
 
 ![image](https://cloud.githubusercontent.com/assets/142114/3298713/8d550794-f605-11e3-845c-8953fc9ac00b.png)
 
