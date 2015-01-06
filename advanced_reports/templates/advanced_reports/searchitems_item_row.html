@@ -24,7 +24,7 @@
         </tr>
     </table>
     {% if object.advreport_actions or object.advreport_extra_information %}
-    <div class="content_container action-row {{ advreport.slug }}-action-row table-row remove" id="object_{{ object.advreport_object_id }}">
+    <div class="content_container action-row {{ advreport.slug }}-action-row table-row remove{% if initial_show %} initial_show{% endif %}" id="object_{{ object.advreport_object_id }}">
         <div class="content_item">
             {% if success %}
                 <span class="success remove">{{ success }}</span>

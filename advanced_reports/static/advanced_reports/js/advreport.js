@@ -449,7 +449,8 @@ $(function(){
             connect_page: function() {
                 var instance = this;
                 this.adv_report.find('.action-row').each(function(){
-                    instance.connect_row($(this), true);
+                    // hide by default, can be overwritten if object has class 'initial_show'
+                    instance.connect_row($(this), !$(this).hasClass('initial_show'));
                 });
 
                 instance.handle_lazy($('.help-text'));

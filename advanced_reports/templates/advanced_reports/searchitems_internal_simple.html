@@ -26,7 +26,7 @@
 {% endif %}
 
 {% for object in paginated.object_list %}
-    {% with True as hide_selection %}
+    {% with hide_selection=True initial_show=True %}
         {% include "advanced_reports/searchitems_item_row.html" %}
     {% endwith %}
 {% empty %}
