@@ -237,8 +237,11 @@
                     content = parsed_content
                 }
                 data = parsed_content;
-            } else if (data == 'OK' || $(data).text() == 'OK')
+            } else if (data == 'OK' || $(data).text() == 'OK') {
                 close = true;
+            } else if (data.redirect){
+                window.location.href = data.redirect;
+            }
 
             // When closing: callback & close mbox
             if (close) {
