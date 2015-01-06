@@ -20,13 +20,12 @@
                 {{ column_header.verbose_name }}
             </th>
             {% endfor %}
-            <th/>
         </tr>
     </table>
 {% endif %}
 
 {% for object in paginated.object_list %}
-    {% with hide_selection=True initial_show=True %}
+    {% with hide_selection=True hide_display_options=True initial_show=True %}
         {% include "advanced_reports/searchitems_item_row.html" %}
     {% endwith %}
 {% empty %}

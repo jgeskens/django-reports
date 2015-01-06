@@ -15,12 +15,14 @@
             </td>
             {% endfor %}
 
+            {% if not hide_display_options %}
             <td class="small" style="text-align: right;">
                 {% if object.advreport_actions or object.advreport_extra_information %}
                 <a href="#" class="show-options">{% trans "show options" %}</a>
                 <a href="#" class="hide-options" style="display: none;">{% trans "hide options" %}</a>
                 {% endif %}
             </td>
+            {% endif %}
         </tr>
     </table>
     {% if object.advreport_actions or object.advreport_extra_information %}
