@@ -7,9 +7,10 @@ $(function(){
         this.adv_slug        = this.adv_report.data('slug');
         this.adv_url         = this.adv_report.data('link');
         this.adv_animation   = this.adv_report.data('animation');
+        this.internal        = this.adv_report.data('internal');
 
         this.init();
-    }
+    };
 
     $.extend(advreport.prototype, {
 
@@ -257,6 +258,9 @@ $(function(){
                                 'response_type': RESPONSE_JSON,
                                 'callback_ajax_posted_success': function(mbox_element, data){
                                     instance.replace_rows(data, action_row, data_row, link.data('next') == true);
+                                    if(instance.internal){
+                                        setTimeout(refresh_reports, 500);
+                                    }
                                     return true;
                                 }
                             }
@@ -354,8 +358,12 @@ $(function(){
                             'url': form.attr('action').replace('/action/', '/ajax/'),
                             'dataType': 'text',
                             'data': form.serialize(),
-                            'success': function(x) {
-                                instance.replace_rows(x, action_row, data_row, form.data('next') == true);
+                            'success': function (x) {
+                                if (instance.internal) {
+                                    refresh_reports();
+                                } else {
+                                    instance.replace_rows(x, action_row, data_row, form.data('next') == true);
+                                }
                             },
                             'error': function(x) { $.mbox_error(_("Alert"), x.responseText); }
                         });
@@ -428,7 +436,11 @@ $(function(){
                                 'dataType': 'text',
                                 'success': function(x) {
                                     link.find('.loader').hide();
-                                    instance.replace_rows(x, action_row, data_row, link.data('next') == true);
+                                    if(instance.internal){
+                                        refresh_reports();
+                                    } else {
+                                        instance.replace_rows(x, action_row, data_row, link.data('next') == true);
+                                    }
                                 },
                                 'error': function(x) {
                                     link.find('.loader').hide();
@@ -476,6 +488,28 @@ $(function(){
         for (var slug in reports) {
             reports[slug].connect_page();
         }
+    }
+
+    function refresh_reports() {
+        $.get(
+            window.location.href,
+            function (data) {
+                var newContainers = [];
+                var html = $.parseHTML(data);
+                $(html).find(".advreport").each(function () {
+                    newContainers.push($(this));
+                });
+                $('.advreport').each(function () {
+                    var newContent = newContainers.shift();
+
+                    // Only load once
+                    $(this).empty();
+                    $(this).html(newContent.html());
+                });
+                connect_advreports();
+                $(".initial_show").show();
+            }
+        );
     }
 
     $(document).unbind('paginatorPageReplaced', connect_advreports);

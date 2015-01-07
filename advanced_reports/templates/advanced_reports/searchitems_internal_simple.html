@@ -5,7 +5,8 @@
         id="advreport_{{ advreport.slug }}"
         data-slug="{{ advreport.slug }}"
         data-animation="{{ advreport.animation }}"
-        data-link="{% url 'advanced_reports_list' advreport.slug %}">
+        data-link="{% url 'advanced_reports_list' advreport.slug %}"
+        data-internal="yes">
 
 {% if advreport.report_header_visible %}
     {% include "advanced_reports/inc_header.html" %}
