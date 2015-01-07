@@ -235,10 +235,14 @@
                 if (json.status == 'SUCCESS') {
                     close = true;
                     content = parsed_content
+                } else if (json.status == 'REDIRECT' && data.redirect) {
+                    window.location.href = data.redirect;
+                    return true;
                 }
                 data = parsed_content;
-            } else if (data == 'OK' || $(data).text() == 'OK')
+            } else if (data == 'OK' || $(data).text() == 'OK') {
                 close = true;
+            }
 
             // When closing: callback & close mbox
             if (close) {
