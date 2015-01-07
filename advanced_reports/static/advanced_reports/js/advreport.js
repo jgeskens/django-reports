@@ -491,8 +491,14 @@ $(function(){
     }
 
     function refresh_reports() {
+        var url;
+        if(window.location.hash){
+            url = window.location.hash.replace("#page:", "");
+        } else {
+            url = window.location.href;
+        }
         $.get(
-            window.location.href,
+            url,
             function (data) {
                 var newContainers = [];
                 var html = $.parseHTML(data);
@@ -501,7 +507,6 @@ $(function(){
                 });
                 $('.advreport').each(function () {
                     var newContent = newContainers.shift();
-
                     // Only load once
                     $(this).empty();
                     $(this).html(newContent.html());
