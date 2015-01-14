@@ -116,7 +116,7 @@
 <div class="container bar">
     <div class="half left">
         {% if advreport.multiple_actions %}
-        <form method="post" action="{{ request.path }}" class="header-form no_disable multiple-action-form">
+        <form method="post" action="{{ request.get_full_path }}" class="header-form no_disable multiple-action-form">
             {% csrf_token %}
             <table>
                 <tr>

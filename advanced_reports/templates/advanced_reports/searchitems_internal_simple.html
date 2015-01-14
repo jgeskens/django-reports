@@ -1,0 +1,37 @@
+{% load url from future %}
+{% load i18n pagination %}
+
+<div class="advreport"
+        id="advreport_{{ advreport.slug }}"
+        data-slug="{{ advreport.slug }}"
+        data-animation="{{ advreport.animation }}"
+        data-link="{% url 'advanced_reports_list' advreport.slug %}"
+        data-internal="yes">
+
+{% if advreport.report_header_visible %}
+    {% include "advanced_reports/inc_header.html" %}
+{% endif %}
+
+{% paginate paginated %}
+{% if advreport.header_visible %}
+    <table class="data" style="table-layout: fixed;">
+        <tr>
+            {% for column_header in advreport.column_headers %}
+            <th{% if column_header.style %} style="{{ column_header.style }}"{% endif %}>
+                {{ column_header.verbose_name }}
+            </th>
+            {% endfor %}
+        </tr>
+    </table>
+{% endif %}
+
+{% for object in paginated.object_list %}
+    {% with hide_selection=True hide_display_options=True initial_show=True %}
+        {% include "advanced_reports/searchitems_item_row.html" %}
+    {% endwith %}
+{% empty %}
+    <div class="alignCenter italic lighter">{{ advreport.get_empty_text }}</div>
+{% endfor %}
+
+{% endpaginate %}
+</div>

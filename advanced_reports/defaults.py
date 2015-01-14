@@ -623,8 +623,11 @@ class AdvancedReport(object):
         Implement this to define some extra context for your template,
         based on the request.
         '''
+        filter_form = self.get_filter_form()
+        if filter_form is not None:
+            filter_form = filter_form(request.GET or None)
         return {
-            'filters_form': self.get_filter_form()(request.GET or None),
+            'filters_form': filter_form,
             'tabbed_filters_links': self.get_tabbed_filter_links(),
         }
 
@@ -637,6 +640,8 @@ class AdvancedReport(object):
         """
         Ugly way to generate generic form for filters- but I can't see better idea, how to do this
         """
+        if not self.models:
+            return None
         all_model_fields = {}
         for model in self.models:
             all_model_fields.update(fields_for_model(model))
