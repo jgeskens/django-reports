@@ -19,6 +19,7 @@
     </div>
 
     <div class="half right alignRight">
+        {% block header_buttons_right %}
         <ul class="buttons">
             {% for link in advreport.links %}
                 <li class="right">
@@ -39,6 +40,7 @@
             <li></li>
             {% endfor %}
         </ul>
+        {% endblock %}
     </div>
 </div>
 {% endif %}

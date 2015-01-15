@@ -6,11 +6,15 @@
         data-slug="{{ advreport.slug }}" 
         data-animation="{{ advreport.animation }}"
         data-link="{% url 'advanced_reports_list' advreport.slug %}">
-
+{% block include_header %}
 {% if advreport.report_header_visible %}
-    {% include "advanced_reports/inc_header.html" %}
+    {% if inc_header_template_name %}
+        {% include inc_header_template_name %}
+    {% else %}
+        {% include "advanced_reports/inc_header.html" %}
+    {% endif %}
 {% endif %}
-
+{% endblock %}
 {% paginate paginated %}
 {% if advreport.header_visible %}
     <table class="data" style="table-layout: fixed;">
