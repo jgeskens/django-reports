@@ -2,6 +2,7 @@ import datetime
 import time
 
 from django import forms
+from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -14,10 +15,13 @@ from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
+from advanced_reports.backoffice.base import AutoSlug
+
 
 class ActionType(object):
     LINKS = 'links'
     BUTTONS = 'buttons'
+    INLINE_BUTTONS = 'inline_buttons'
 
 
 class action(object):
@@ -215,7 +219,7 @@ class ActionException:
 
 
 class AdvancedReport(object):
-    slug = None
+    slug = AutoSlug(remove_suffix='Report')
     '''
     Required. A unique url-friendly name for your Advanced Report
     '''
@@ -408,6 +412,29 @@ class AdvancedReport(object):
     Determines if the advanced report should display a only single items. Used when you want to display
     to report in an other template
     '''
+
+    def __init__(self, *args, **kwargs):
+        self.model_admin = None
+
+        # Add defaults from the model meta
+        if self.models:
+            model = self.models[0]
+            if not self.verbose_name:
+                self.verbose_name = model._meta.verbose_name
+            if not self.verbose_name_plural:
+                self.verbose_name_plural = model._meta.verbose_name_plural
+
+            # Add defaults from the model admin
+            model_admin = admin.site._registry.get(model)
+            if model_admin:
+                self.model_admin = model_admin
+                if self.fields is None:
+                    self.fields = model_admin.list_display
+                if not self.search_fields:
+                    self.search_fields = model_admin.search_fields
+                if not self.sortable_fields:
+                    self.sortable_fields = model_admin.list_display
+
 
     def queryset(self):
         '''
