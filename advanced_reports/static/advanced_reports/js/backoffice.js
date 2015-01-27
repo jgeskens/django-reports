@@ -239,6 +239,40 @@ function($scope, $http, $location, boApi, $route, $parse, $q, boReverser){
         }
     };
 
+    $scope.action = function(method, actionParams, reloadOnSuccess, url_suffix){
+        return boApi.post('model_action', {method: method, params: actionParams || {}, model: $scope.model.model
+        }, url_suffix).then(function(result){
+            if (angular.isUndefined(reloadOnSuccess) || reloadOnSuccess)
+                $scope.fetchModel(true);
+            return result;
+        }, function(error, status){
+            return $q.reject(error, status);
+        });
+    };
+
+    $scope.call = function(method, actionParams){
+        return $scope.action(method, actionParams, false);
+    };
+
+    $scope.goto = function(route){
+        return function(){
+            window.location.href = $scope.get_url(route);
+        };
+    };
+
+    $scope.broadcast = function(event){
+        return function(){
+            $scope.$broadcast(event);
+        };
+    };
+
+    $scope.exec = function(code){
+        return function(data){
+            $scope.data = data;
+            $parse(code)($scope);
+        };
+    };
+
     $scope.$on('$routeChangeSuccess', function (){
         $scope.params = $route.current.params;
         $scope.fetchModel(false);
@@ -408,6 +442,9 @@ app.directive('view', ['$compile', '$q', 'boApi', 'boUtils', '$timeout', '$parse
                             showError(error);
                         return $q.reject(error, status);
                     });
+                };
+                data.call = function(method, actionParams){
+                    return data.action(method, actionParams, false);
                 };
                 data.action_link = function(method, actionParams){
                     var combinedParams = angular.extend({method: method}, params, actionParams);
