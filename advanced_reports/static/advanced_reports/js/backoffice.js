@@ -539,7 +539,7 @@ app.factory('boUtils', function(){
 
 app.filter('capitalize', function(){
     return function(input){
-        if (input.length > 0)
+        if (input && input.length > 0)
             return input.charAt(0).toUpperCase() + input.slice(1);
         return '';
    };
