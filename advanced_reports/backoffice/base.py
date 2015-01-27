@@ -12,16 +12,14 @@ from django.shortcuts import render_to_response, get_object_or_404, redirect, re
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
 from django.views.decorators.cache import never_cache
-from advanced_reports.backoffice.api_utils import JSONResponse, ViewRequestParameters
-from advanced_reports.backoffice.models import SearchIndex
-from advanced_reports.backoffice.search import convert_to_raw_tsquery
 
+from .api_utils import JSONResponse, ViewRequestParameters
+from .conf import DB_IS_POSTGRES
+from .models import SearchIndex
+from .search import convert_to_raw_tsquery
 from .decorators import staff_member_required
 
 import random
-
-
-DB_IS_POSTGRES = 'postgresql' in settings.DATABASES['default'].get('ENGINE', '')
 
 
 def random_token():
