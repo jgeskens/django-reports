@@ -1009,10 +1009,15 @@ class AdvancedReport(object):
                 html = getattr(item, field_name, None)
         return html
 
+    def get_html_for_value(self, value):
+        return value
+
     def get_item_html(self, field_name, item):
-        html = getattr(self, 'get_%s_html' % field_name, lambda i: None)(item)
-        if html is None:
-            html = self.lookup_item_value(field_name, item)
+        value = getattr(self, 'get_%s_html' % field_name, lambda i: None)(item)
+        if value is None:
+            value = self.lookup_item_value(field_name, item)
+
+        html = self.get_html_for_value(value)
 
         decorator = getattr(self, 'get_%s_decorator' % field_name, lambda i: None)(item)
         if decorator is not None:
