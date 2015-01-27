@@ -75,8 +75,8 @@ class action(object):
 
     prefetch_ajax_form = False
     '''
-    Optional. If False, the form will not be loaded together with the item, but later. Only applies when
-    form_via_ajax is True.
+    Optional. If True, the form will be loaded together with the item. Actions where
+    form_via_ajax is True will be prefetched anyway.
     '''
 
     link_via_ajax = False
