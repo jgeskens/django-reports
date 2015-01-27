@@ -115,7 +115,9 @@ app.factory('boApi', ['$http', '$q', 'boUtils', '$timeout', function($http, $q, 
     };
 }]);
 
-app.controller('MainController', ['$scope', '$http', '$location', 'boApi', '$route', 'boReverser', function($scope, $http, $location, boApi, $route, boReverser){
+app.controller('MainController',
+['$scope', '$http', '$location', 'boApi', '$route', '$parse', '$q', 'boReverser',
+function($scope, $http, $location, boApi, $route, $parse, $q, boReverser){
     $scope.params = {};
 
     $scope.path = function(){
@@ -166,7 +168,7 @@ app.controller('MainController', ['$scope', '$http', '$location', 'boApi', '$rou
 
     $scope.search_show_results_preview = function(){
         $scope.search_results_preview_visible = true;
-    }
+    };
 
     $scope.is_search_results_preview_visible = function(){
         var visible = $scope.search_results_preview_visible && $scope.search_query.length > 0;
@@ -819,3 +821,4 @@ app.directive('boPaginator', ['$timeout', function($timeout){
         scope: {page: '=', page_count: '=pageCount', on_change: '&onChange'}
     };
 }]);
+
