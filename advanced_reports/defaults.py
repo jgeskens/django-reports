@@ -758,8 +758,10 @@ class AdvancedReport(object):
         to_date = params.get('to', '')
         from_date_struct = time.strptime(params['from'], '%Y-%m-%d') if from_date else None
         to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
+        filters_from_request = self.get_filters_from_request(request)
 
-        queryset = queryset.filter(**self.get_filters_from_request(request))
+        if filters_from_request:
+            queryset = queryset.filter(**filters_from_request)
 
         if from_date_struct and to_date_struct:
             date_range_query = Q()
