@@ -7,6 +7,8 @@ angular.module('BackOfficeApp')
     $scope.search = $location.search() || {};
     $scope.single_action = $scope.view.params.action || null;
     $scope.selected = {};
+    $scope.multiple_succeeded = {};
+    $scope.multiple_failed = {};
 
     $scope.$watch(function(){
         return $location.search();
@@ -51,7 +53,7 @@ angular.module('BackOfficeApp')
             $scope.report = data;
             if (data.item_count == 1)
                 $scope.toggle_expand($scope.report.items[0]);
-            $scope.page_count = Math.floor(data.item_count / data.items_per_page) + 1;
+            $scope.page_count = Math.floor((data.item_count - 1) / data.items_per_page) + 1;
             $scope.selected = {};
             $scope.multiple_action_dict = {};
             angular.forEach($scope.report.multiple_action_list, function(value){
@@ -83,7 +85,10 @@ angular.module('BackOfficeApp')
     };
 
     $scope.has_expanded_content = function(item){
-        return (item.extra_information.length > 0 || item.actions.length > 0);
+        return (item.extra_information.length > 0
+            || item.actions.length > 0
+            || $scope.multiple_succeeded[item.item_id]
+            || $scope.multiple_failed[item.item_id]);
     };
 
     $scope.toggle_expand = function(item) {
@@ -400,7 +405,7 @@ angular.module('BackOfficeApp')
 
     $scope.select_mode = function(){
         return $scope.view.params.selectMode == 'true';
-    }
+    };
 
     $scope.fetch_report();
 }]);
