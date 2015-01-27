@@ -1,0 +1,24 @@
+<div class="row">
+    <div class="col-xs-12">
+        <p>
+            Number of items: <span ng-bind="model.items.length"></span>
+        </p>
+        <form ng-submit="call('add_item', {item: new_item.name, todo_list: model.id}).then(exec('model.items=data.items')); new_item={}">
+        <ul class="list-group">
+            <li class="list-group-item" ng-repeat="item in (model.new_items || model.items)">
+                <a link-to="get_url({model: 'todoitem', id: item.id})" ng-bind="item.name"></a>
+                <button type="reset" class="badge" ng-click="action('remove_item', {todo_item: item.id})">x</button>
+            </li>
+            <li class="list-group-item">
+            <label style="width: 100%; margin: 0;">
+            <input style="width: 100%; border: 0; outline: none; padding: 0;"
+                   type="text"
+                   ng-model="new_item.name"
+                   placeholder="enter a new item here"
+                   />
+            </label>
+            </li>
+        </ul>
+        </form>
+    </div>
+</div>
