@@ -15,6 +15,7 @@
 import sys
 import os
 
+sys.path.append('../advreport_test_project')
 os.environ['DJANGO_SETTINGS_MODULE'] = 'advreport_test_project.settings'
 
 # If extensions (or modules to document with autodoc) are in another directory,

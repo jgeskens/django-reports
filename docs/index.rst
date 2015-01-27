@@ -15,8 +15,6 @@ Contents:
    report_reference
 
 
-
-
 Indices and tables
 ==================
 
