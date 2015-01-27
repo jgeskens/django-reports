@@ -226,9 +226,16 @@ angular.module('BackOfficeApp')
                     global: $scope.report.all_selected_global
                 };
                 $scope.view.action('multiple_action', action_params, false).then(function(data){
-                    $scope.multiple_succeeded = data.succeeded;
-                    $scope.multiple_failed = data.failed;
-                    $scope.fetch_report();
+                    if (data.succeeded || data.failed){
+                        $scope.multiple_succeeded = data.succeeded;
+                        $scope.multiple_failed = data.failed;
+                        $scope.fetch_report();
+                    } else {
+                        $scope.detail_action = action;
+                        $scope.detail_action_content = data.dialog_content || data;
+                        $scope.detail_action_dialog_style = data.dialog_style || {width: 'auto'};
+                        $scope.detail_popup.modal('show');
+                    }
                 });
             };
 
@@ -273,7 +280,8 @@ angular.module('BackOfficeApp')
                         $scope.trigger_success_attr(action);
                     } else {
                         $scope.detail_action = action;
-                        $scope.detail_action_content = data;
+                        $scope.detail_action_content = data.dialog_content || data;
+                        $scope.detail_action_dialog_style = data.dialog_style || {width: 'auto'};
                         $scope.detail_popup.modal('show');
                     }
 
