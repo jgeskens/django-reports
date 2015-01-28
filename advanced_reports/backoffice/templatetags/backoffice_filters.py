@@ -1,7 +1,8 @@
+from collections import OrderedDict
+
 from django import template
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
-from django.utils.datastructures import SortedDict
 from django.utils.text import capfirst
 
 import re
@@ -74,7 +75,7 @@ def pretty_join(value_list, seperator=', '):
 @register.filter
 def inline_errors(value):
     form = value
-    err_list = SortedDict({})
+    err_list = OrderedDict({})
 
     # sort errors
     for key,errors in form.errors.items():

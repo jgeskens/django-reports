@@ -1,5 +1,6 @@
+import importlib
+
 from django.core.management.base import BaseCommand
-from django.utils import importlib
 from advanced_reports.backoffice.models import SearchIndex
 
 
