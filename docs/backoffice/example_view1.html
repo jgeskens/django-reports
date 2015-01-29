@@ -1,0 +1,32 @@
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <h2>View Example: &lt;div view="simple"<span ng-show="view.params.extra=='true'"> extra="true"</span>&gt;&lt;/div&gt;</h2>
+    </div>
+
+    <div class="panel-body">
+        <p>
+            My view slug according to my Django context is: {{ view_slug }}
+        </p>
+
+        <form class="form">
+            <button class="btn btn-default" ng-click="ip=view.call('get_ip', {})">Get IP</button>
+            <input class="form-control" type="text" ng-model="ip" disabled>
+        </form>
+
+        <table class="table" ng-init="items=view.call('get_items', {})">
+            <thead>
+                <tr><th>Key</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="(key, value) in items">
+                    <td ng-bind="key"></td>
+                    <td ng-bind="value"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div ng-show="view.params.extra == 'true'">
+            Showing this paragraph because <pre>extra="true"</pre> is being used.
+        </div>
+    </div>
+</div>

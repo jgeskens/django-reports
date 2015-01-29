@@ -11,8 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   report_tutorial
-   report_reference
+   reports/index
+   backoffice/index
 
 
 Indices and tables
