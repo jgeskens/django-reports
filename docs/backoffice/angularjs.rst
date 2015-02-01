@@ -20,7 +20,7 @@ BackOfficeApp module
 Inside ``backoffice.js``, found in the ``static`` folder, the ``angular.module('BackOfficeApp')`` can be found. Below is a list of everything included with this module.
 
 boApi service
-^^^^^^^^^^^^^
+-------------
 
 The ``boApi`` service exposes some function which make it easy to communicate to the :ref:`backoffice_api`.
 
@@ -33,7 +33,7 @@ The ``boApi`` service exposes some function which make it easy to communicate to
 .. _main_controller:
 
 MainController controller
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 The main controller governing the Backoffice website. Some useful functions exposed to the ``$scope``:
 
@@ -60,7 +60,7 @@ The main controller governing the Backoffice website. Some useful functions expo
 .. _boreverser:
 
 boReverser service
-^^^^^^^^^^^^^^^^^^
+------------------
 
 The ``boReverser`` service takes a route object and creates a web link from it. It does this in a generic way.
 
@@ -99,7 +99,7 @@ The ``boReverser`` service takes a route object and creates a web link from it. 
   As you can see, this small utility is quite powerful and covers most use cases for URL generation inside your application.
 
 compile directive
-^^^^^^^^^^^^^^^^^
+-----------------
 
 .. warning::
 
@@ -116,7 +116,26 @@ Use this directive like this:
 Then you will have a ``<textarea>`` where you can try out some functionality, and the result will be displayed
 immediately in the ``<div>`` below.
 
+view directive
+--------------
 
+.. seealso:: See also the :ref:`views` section.
 
+.. code-block:: html
 
+    <div view="myview" params="{a: 5, b: 3}" c="mystring" eval-d="5+3" instance="myview1"></div>
 
+The ``view`` directive renders a Backoffice View defined by a :class:`~advanced_reports.backoffice.base.BackOfficeView` subclass.
+
+Attributes:
+
+* ``view``: The :attr:`~advanced_reports.backoffice.base.BackOfficeView.slug` of the :class:`~advanced_reports.backoffice.base.BackOfficeView` subclass.
+* ``params``: An object with key/value pairs of parameters.
+* ``*``: An attribute that is passed as string (not evaluated). This will be added to the parameters.
+* ``eval-*``: An attribute that is passed as a calculated value. This will be added to the parameters.
+* ``instance``: (Optional) The name under which to expose the ``view`` object to the current ``$scope``. By default, this is the ``slug``. This is useful if you have multiple instances of views with the same ``slug`` and want to talk to one of them from the outside.
+
+Functions and attributes exposed to the ``$scope`` of the view :attr:`~advanced_reports.backoffice.base.BackOfficeView.template`:
+
+* ``view.params``: An object containing the parameters of the view.
+* ``view.fetch()``: Refetches the initial view template (calls :meth:`~advanced_reports.backoffice.base.BackOfficeView.get`)
