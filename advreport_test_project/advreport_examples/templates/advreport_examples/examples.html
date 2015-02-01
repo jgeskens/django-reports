@@ -1,0 +1,84 @@
+{% extends "advreport_examples/page-base.html" %}
+
+{% block title %}Examples - {{ block.super }}{% endblock %}
+{% block page-title %}Examples{% endblock %}
+
+{% block content %}
+<style type="text/css">
+    pre {
+        overflow: auto;
+        word-wrap: normal;
+        white-space: pre;
+        font-size: 12px;
+    }
+</style>
+<div class="container">
+    <h2>Views</h2>
+
+    <h3>View example 1</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Usage</h4>
+            <pre>&lt;div view="simple" extra="true"&gt;&lt;/div&gt;</pre>
+            <div view="exampleincludepython" include="advanced_reports.backoffice.examples.views.SimpleView"></div>
+            <div view="exampleincludetemplate" include="advanced_reports/backoffice/views/simple.html"></div>
+        </div>
+        <div class="col-md-6">
+            <div view="simple" extra="true"></div>
+        </div>
+    </div>
+
+    <h3>View example 2</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Usage</h4>
+            <pre>&lt;div view="exampleincludetemplate" include="advanced_reports/backoffice/home.html"&gt;&lt;/div&gt;</pre>
+            <div view="exampleincludepython" include="advreport_examples.views.ExampleIncludeTemplateView"></div>
+            <div view="exampleincludetemplate" include="advanced_reports/backoffice/views/exampleinclude.html"></div>
+        </div>
+        <div class="col-md-6">
+            <div view="exampleincludetemplate" include="advanced_reports/backoffice/home.html"></div>
+        </div>
+    </div>
+
+    <h3>View example 3</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Usage</h4>
+            <pre>&lt;div view="todolists" params="{user_id: 1}"&gt;&lt;/div&gt;</pre>
+            <div view="exampleincludepython" include="oemfoe_todos_app.models.TodoList"></div>
+            <div view="exampleincludepython" include="oemfoe_todos_app.backoffice.definitions.TodoListsView"></div>
+            <div view="exampleincludetemplate" include="advanced_reports/backoffice/views/todolists.html"></div>
+        </div>
+        <div class="col-md-6">
+            <div view="todolists" params="{user_id: 1}"></div>
+        </div>
+    </div>
+
+    <h3>Using the AdvancedReport view</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Usage</h4>
+            <pre>&lt;div class="panel panel-default" view="advanced_report" slug="user"&gt;&lt;/div&gt;</pre>
+            <div view="exampleincludepython" include="advanced_reports.backoffice.examples.reports.UserReport"></div>
+        </div>
+        <div class="col-md-6">
+            <h4>Resulting report</h4>
+            <div class="panel panel-default" view="advanced_report" slug="user"></div>
+        </div>
+    </div>
+
+    <h3>Advanced Reports with normal Python classes</h3>
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Usage</h4>
+            <pre>&lt;div class="panel panel-default" view="advanced_report" slug="nomodel"&gt;&lt;/div&gt;</pre>
+            <div view="exampleincludepython" include="advanced_reports.backoffice.examples.reports.NoModel"></div>
+            <div view="exampleincludepython" include="advanced_reports.backoffice.examples.reports.NoModelReport"></div>
+        </div>
+        <div class="col-md-6">
+            <div class="panel panel-default" view="advanced_report" slug="nomodel"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}

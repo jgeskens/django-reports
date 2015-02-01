@@ -289,7 +289,7 @@ table.numbers {
 }
 
 .panel {
-    @include border-radius(0);
+    /*@include border-radius(0);*/
     position: relative;
 
     .panel-heading {
@@ -377,4 +377,13 @@ footer {
     background: lighten($grayLighter, 10%);
     padding: 32px 0;
     color: $gray;
+}
+
+
+body.modal-open, .modal-open .navbar-fixed-top, .modal-open .navbar-fixed-bottom {
+    margin-right: 0;
+}
+
+.modal {
+    overflow-y: auto;
 }

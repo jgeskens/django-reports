@@ -42,7 +42,7 @@ class UserModel(BackOfficeModel):
 
 class UserView(BackOfficeView):
     def render(self, request, user, form):
-        return TemplateResponse(request, 'advanced_Reports/backoffice/tests/user-form.html', {'user': user, 'form': form})
+        return TemplateResponse(request, 'advanced_reports/backoffice/tests/user-form.html', {'user': user, 'form': form})
 
     def get(self, request):
         user = get_object_or_404(User, pk=request.view_params.get('pk'))
@@ -60,17 +60,10 @@ class UserView(BackOfficeView):
     def update(self, request):
         data = request.view_params.get('data')
         user = get_object_or_404(User, pk=request.view_params.get('pk'))
-        user.username = data['username']
-        user.email = data['email']
         user.first_name = data['first_name']
         user.last_name = data['last_name']
         user.save()
         return data
-
-    def calculation(self, request):
-        data = request.action_params.get('data')
-        return {'sum': int(data.get('x', 0) or 0) + int(data.get('y', 0) or 0)}
-
 
 
 test_backoffice = TestBackOffice()

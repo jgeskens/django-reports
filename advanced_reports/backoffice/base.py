@@ -12,16 +12,14 @@ from django.shortcuts import render_to_response, get_object_or_404, redirect, re
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
 from django.views.decorators.cache import never_cache
-from advanced_reports.backoffice.api_utils import JSONResponse, ViewRequestParameters
-from advanced_reports.backoffice.models import SearchIndex
-from advanced_reports.backoffice.search import convert_to_raw_tsquery
 
+from .api_utils import JSONResponse, ViewRequestParameters
+from .conf import DB_IS_POSTGRES
+from .models import SearchIndex
+from .search import convert_to_raw_tsquery
 from .decorators import staff_member_required
 
 import random
-
-
-DB_IS_POSTGRES = 'postgresql' in settings.DATABASES['default'].get('ENGINE', '')
 
 
 def random_token():
@@ -56,166 +54,312 @@ class AutoSlug(object):
 
 
 class AutoTemplate(AutoSlug):
+    def __init__(self, directory, remove_suffix=None):
+        super(AutoTemplate, self).__init__(remove_suffix=remove_suffix)
+        self.directory = directory
+
     def __get__(self, instance, owner):
         slug = super(AutoTemplate, self).__get__(instance, owner)
-        return u'advanced_reports/backoffice/views/{}.html'.format(slug)
+        return u'advanced_reports/backoffice/{0}/{1}.html'.format(self.directory, slug)
 
 
-class BackOfficeBase(object):
+class BackOfficeTab(object):
     """
-    The base class of a Back Office application. Inherit from this class and
-    define your own custom backoffice!
+    A tab that will be shown for a ``BackOfficeModel``. A ``BackOfficeModel`` can
+    have some tabs associated with it. Each tab is represented by:
+
+    *   ``slug``: The unique (inside a model) slug for a tab.
+        Used for navigation in the URL.
+    *   ``title``: A human title that will pe used as the caption for a tab.
+    *   ``template``: The path to a template that must be rendered inside the tab.
+        This template is given the ``instance`` context variable, which contains
+        the current model instance.
     """
 
-    #: The title of the BackOffice application. This is used on pages that
-    #: inherit from the ``model_template``.
-    title = 'Untitled Backoffice'
+    slug = AutoSlug(remove_suffix='Tab')
+    title = None
+    template = None
+    permission = None
 
-    #: The template file that will be used to show models. It has to define
-    #: an ng-view inside of it. Please extend the default template if you
-    #: want to specify your own navigation (which you will probably want
-    #: to do) and put your own template here.
-    model_template = 'advanced_reports/backoffice/model-base.html'
+    def __init__(self, slug, title, template=None, permission=None, shadow=None, context=None):
+        self.slug = slug
+        self.title = title
+        if template:
+            self.template = template
+        else:
+            self.template = u'advanced_reports/backoffice/{0}/{1}.html'.format('tabs', slug)
+        self.shadow = shadow
+        self.permission = permission
+        self.context = context or {}
 
-    def __init__(self, name='backoffice', app_name='backoffice'):
+    def get_serialized_meta(self):
+        return {
+            'slug': self.slug,
+            'title': self.title,
+            'shadow': self.shadow
+        }
+
+    def get_serialized(self, request, instance):
+        context = {'instance': instance}
+        context.update(self.context)
+        template = self.template or 'advanced_reports/backoffice/default-tab.html'
+        return {
+            'slug': self.slug,
+            'title': self.title,
+            'template': render_to_string(template, context,
+                                         context_instance=RequestContext(request)) + random_token(),
+            'shadow': self.shadow
+        }
+
+    def __repr__(self):
+        return 'BackOfficeTab(%r, %r, %r, permission=%r, shadow=%r, context=%r)' \
+               % (self.slug, self.title, self.template, self.permission, self.shadow, self.context)
+
+
+class BackOfficeModel(object):
+    """
+    The base class for a ``BackOfficeModel`` implementation. Implement this
+    class and register your own Django models to a backoffice.
+    """
+
+    #: A unique slug to identify a model ('user', 'sim', ...)
+    slug = AutoSlug(remove_suffix='Model')
+
+    #: The actual Django model that is being used
+    model = None
+
+    #: (optional) The name of a ``ForeignKey`` that points to a parent object.
+    #: If this parent is registered with the same backoffice, they are shown as
+    #: a parent/child relation.
+    parent_field = None
+
+    #: (optional) The plural version of parent_field.
+    parent_fields = None
+
+    #: Verbose name for displaying purposes. Should be lowercase. E.g. 'user'
+    verbose_name = None
+
+    #: Plural verbose name for displaying purposes. Should be lowercase. E.g. 'users'
+    verbose_name_plural = None
+
+    #: A mapping of slugs to ``BackOfficeModel`` implementation instances
+    #: to represent kinds of children. This property will be automatically filled
+    #: when you register your parent and child models with a BackOfficeBase
+    #: implementation instance.
+    children = None
+    child_to_accessor = None
+
+    #: A mapping of slugs to ``BackOfficeModel`` implementation instances
+    #: to represent kinds of parents. This property will be automatically filled
+    #: when you register your parent and child models with a BackOfficeBase
+    #: implementation instance.
+    parents = None
+    parent_to_accessor = None
+
+    #: Include siblings of specified parent slug in serialization.
+    siblings = None
+
+    #: Define a priority that will be used for displaying purposes.
+    #: Can also be used as a way to sort models by kind, if used uniquely.
+    priority = 999
+
+    #: For displaying purposes. Will probably change, so leave alone.
+    has_header = True
+
+    #: For displaying purposes. Will probably change, so leave alone.
+    collapsed = True
+
+    #: Whether we want to appear as a menu of children in the parent view
+    show_in_parent = False
+
+    #: An optional template path to render a header for a model instance
+    #: above the tabs.
+    header_template = None
+
+    #: A tuple of ``BackOfficeTab`` instances. These tabs can contain templates
+    #: which in turn can display extra information about this model.
+    tabs = ()
+
+    #: When you have overridden ``search_index`` and included child objects
+    #: in your search index (e.g. comments on a user) you can define these
+    #: child models to trigger a reindex when a child changes.
+    #: Example: ``{Comment: (lambda c: c.content_object, User)}``.
+    #: In the value of this dictionary you define a tuple with a function
+    #: which knows how to find the parent object and a model type to make
+    #: sure we are getting the right argument to our ``search_index``
+    #: implementation.
+    search_index_dependencies = None
+
+    #: An optional string containing a permission which has to be checked
+    #: against the request that queries this model. If the permission is
+    #: not satisfied, the model will not show up in search results and
+    #: will never display.
+    permission = None
+
+    def __init__(self):
+        self.children = {}
+        self.child_to_accessor = {}
+        self.parents = {}
+        self.parent_to_accessor = {}
+        self.search_index_dependencies = {}
+
+    def get_title(self, instance):
         """
-        Constructor for a BackOfficeBase implementation.
-
-        :param name: the instance name for this implementation used for
-        Django url namespacing.
-        :param app_name: the app name for this implementation. In most cases
-        can be just left alone.
-        :return: a BackOfficeBase implementation instance.
+        A textual representation of a model instance to be used as a title.
         """
-        self.name = name
-        self.app_name = app_name
+        return unicode(instance)
 
-
-    def define_urls(self):
+    def serialize(self, instance):
         """
-        Implement this to add some custom url patterns to a backoffice.
-        They will automatically get the proper namespacing. For example,
-        if your backoffice is called "helpdesk" and your url is called
-        "stats", you must use ``{% url 'helpdesk:stats' %}`` in your
-        templates.
-
-        :return: a tuple/list of url patterns (not using ``patterns()``!)
+        Override this to add extra information to be exposed to the Angular
+        side of your tab templates.
         """
-        return ()
+        return {}
+
+    def render_template(self, request, instance):
+        if self.header_template:
+            context = {
+                'instance': instance
+            }
+            return render_to_string(self.header_template, context,
+                                    context_instance=RequestContext(request))
+        return u''
+
+    def get_parent_model_slug_for_field(self, parent_field):
+        return None
+
+    def get_parent_accessor_to_myself(self, parent_field):
+        parent_django_field = self.model._meta.get_field(parent_field)
+        return parent_django_field.rel.related_name \
+            or '%s_set' % self.model.__name__.lower()
+
+    def get_parent_accessor_from_myself(self, parent_field):
+        return parent_field
+
+    def get_route(self, instance):
+        return {'model': self.slug, 'id': instance.pk}
+
+    def get_serialized(self, request, instance, children=False, parents=False, siblings=False, templates=False):
+        serialized = {
+            'id': instance.pk,
+            'title': self.get_title(instance),
+            'model': self.slug,
+            'route': self.get_route(instance),
+            'is_object': True,
+            'meta': self.serialize_meta(request)
+        }
+
+        if templates:
+            serialized['tabs'] = dict((t.slug, t.get_serialized(request, instance)) \
+                                 for t in self.tabs \
+                                 if check_permission(request, t.permission))
+            serialized['header_template'] = self.render_template(request, instance) + random_token()
+
+        if children:
+            serialized['children'] = self.get_children(request, instance)
+
+        if parents:
+            serialized['parents'] = self.get_parents(request, instance)
+
+        if self.siblings and siblings:
+            parent_bo_model = self.parents[self.siblings]
+            parent = self.get_parent_by_model(request, instance, parent_bo_model)
+            serialized['siblings'] = parent_bo_model.get_serialized_children_by_model(request, parent, self, exclude_meta=True)
+
+        serialized.update(self.serialize(instance))
+        return serialized
 
     @property
-    def urls(self):
-        """
-        The actual url patterns for this backoffice. You can include
-        these in your main urlconf.
+    def parent_fields_list(self):
+        return self.parent_fields or self.parent_field and [self.parent_field]
 
-        :return: url patterns
-        """
-        return patterns('',
-                        url(r'^$', self.decorate(self.home), name='home'),
-                        url(r'^logout/$', self.logout, name='logout'),
-                        url(r'^api/(?P<method>[^/]+)/$', self.decorate(self.api), name='api'),
-                        url(r'^api/$', self.decorate(self.api), name='api_home'),
-                        url(r'^login/as/(?P<user_id>\d+)/$', self.decorate(self.login_as), name='login_as'),
-                        url(r'^end/login/as/$', self.end_login_as, name='end_login_as'),
-                        *self.define_urls()
-        ), self.app_name, self.name
+    def get_children_by_model(self, request, instance, bo_model):
+        if not instance or not check_permission(request, bo_model.permission):
+            return []
+        return getattr(instance, self.child_to_accessor[bo_model.slug]).all()
 
-    def decorate(self, view):
-        """
-        Implement this to add some custom decoration for the internal
-        Django views for this backoffice.
+    def get_serialized_children_by_model(self, request, instance, bo_model, exclude_meta=False):
+        if not check_permission(request, bo_model.permission):
+            return []
+        children = self.get_children_by_model(request, instance, bo_model)
+        serialized_children = [bo_model.get_serialized(request, c) for c in children]
+        if bo_model.has_header and not exclude_meta:
+            serialized = bo_model.serialize_meta(request)
+            serialized['children'] = serialized_children
+            return [serialized]
+        else:
+            return serialized_children
 
-        :param view: the view to decorate
-        :return: the decorated view
-        """
-        # TODO: add permissions
-        return staff_member_required(self)(view)
+    def get_parent_by_model(self, request, instance, bo_model):
+        if not check_permission(request, bo_model.permission):
+            return None
+        parent = getattr(instance, self.parent_to_accessor[bo_model.slug])
+        if parent is None:
+            return None
+        if not isinstance(parent, bo_model.model):
+            return None
+        return parent
 
-    def default_context(self):
-        """
-        Default template context values for internal backoffice page.
+    def get_serialized_parent_by_model(self, request, instance, bo_model):
+        if not check_permission(request, bo_model.permission):
+            return None
+        parent = self.get_parent_by_model(request, instance, bo_model)
+        return bo_model.get_serialized(request, parent) if parent else None
 
-        :return: context dict
-        """
-        return {'backoffice': self,
-                'api_url': reverse(self.name + ':api_home', current_app=self.app_name),
-                'root_url': reverse(self.name + ':home', current_app=self.app_name)}
+    def serialize_meta(self, request):
+        return {
+            'slug': self.slug,
+            'verbose_name': self.verbose_name or self.model._meta.verbose_name,
+            'verbose_name_plural': self.verbose_name_plural or self.model._meta.verbose_name_plural,
+            'has_header': self.has_header,
+            'collapsed': self.collapsed,
+            'show_in_parent': self.show_in_parent,
+            'tabs': [t.get_serialized_meta() for t in self.tabs if check_permission(request, t.permission)],
+            'is_meta': True
+        }
 
-    @never_cache
-    def logout(self, request, *args, **kwargs):
-        """
-        Calls ``django.contrib.auth.views.logout`` with a custom template and
-        extra context.
-        """
-        from django.contrib.auth.views import logout
-        kwargs['template_name'] = 'advanced_reports/backoffice/logout.html'
-        kwargs['extra_context'] = self.default_context()
-        return logout(request, *args, **kwargs)
+    def get_children(self, request, instance):
+        if not self.children:
+            return ()
+        child_models = sorted(self.children.values(), key=lambda m: m.priority)
+        return sum((self.get_serialized_children_by_model(request, instance, m) for m in child_models), [])
 
-    def home(self, request):
-        """
-        The main Django view for this backoffice.
-        """
-        return render_to_response(self.model_template,
-                                  self.default_context(),
-                                  context_instance=RequestContext(request))
+    def get_parents(self, request, instance):
+        if not self.parents:
+            return ()
+        parent_models = sorted(self.parents.values(), key=lambda m: m.priority)
+        parents = (self.get_serialized_parent_by_model(request, instance, parent_model) for parent_model in parent_models)
+        return [parent for parent in parents if parent]
 
-    # Impersonation
-    def login_as(self, request, user_id):
-        me_id = request.session.get('impersonation_original_user', None)
-        me = User.objects.get(pk=me_id) if me_id else request.user
-        user = get_object_or_404(User, pk=user_id)
-        user.backend = 'django.contrib.auth.backends.ModelBackend'
-        login(request, user)
-        request.session['impersonation_original_user'] = me.pk
-        request.session['impersonating'] = True
-        return redirect(settings.LOGIN_REDIRECT_URL)
+    def reindex(self, instance, backoffice_instance):
+        index_text = self.search_index(instance)
+        index, created = SearchIndex.objects.get_or_create(backoffice_instance=backoffice_instance,
+                                                           model_slug=self.slug,
+                                                           model_id=instance.pk,
+                                                           defaults={'to_index': index_text})
+        if not created:
+            index.to_index = index_text
+            index.save()
 
-    def end_login_as(self, request):
-        if 'impersonation_original_user' in request.session:
-            me_id = request.session['impersonation_original_user']
-            me = get_object_or_404(User, pk=me_id)
-            me.backend = 'django.contrib.auth.backends.ModelBackend'
-            del request.session['impersonation_original_user']
-            del request.session['impersonating']
-            login(request, me)
-            return redirect(reverse('backoffice:home', current_app=self.name))
-        return redirect(settings.LOGIN_REDIRECT_URL)
+    def delete_index(self, instance, backoffice_instance):
+        try:
+            index = SearchIndex.objects.get(backoffice_instance=backoffice_instance,
+                                            model_slug=self.slug,
+                                            model_id=instance.pk)
+            index.delete()
+        except ObjectDoesNotExist:
+            pass
 
-    def api(self, request, method=None):
-        """
-        A very simple REST-like API implementation which just passes requests
-        on to the right functions.
+    def search_index(self, instance):
+        return unicode(instance)
 
-        An instance of ``advanced_reports.backoffice.api_utils.ViewRequestParameters``
-        will be assigned to the ``request`` as ``view_params``.
 
-        :param request: A HTTP request where ``view_params`` will be attached to.
-        :param method: The actual instance method of this backoffice class that will
-        be called.
-        :return: a JSONResponse
-        """
-        if not method:
-            return JSONResponse(None)
+class ModelMixin(object):
+    """
+    This mixin implements support for BackOfficeModels.
 
-        request.view_params = ViewRequestParameters(request)
-
-        fn = getattr(self, 'api_%s_%s' % (request.method.lower(), method), None)
-        if fn is None:
-            raise Http404
-
-        response = fn(request)
-
-        if isinstance(response, HttpResponse):
-            return response
-
-        msgs = [m.__dict__ for m in messages.get_messages(request)]
-        return JSONResponse({'messages': msgs, 'response_data': response})
-
-    ######################################################################
-    # Model Registration
-    ######################################################################
+    Requires that ``self.name`` is available.
+    """
 
     #: A mapping between Django models and ``BackOfficeModel`` implementation
     #: instances.
@@ -364,34 +508,55 @@ class BackOfficeBase(object):
                         bo_model.parents[parent_bo_model.slug] = parent_bo_model
                         bo_model.parent_to_accessor[parent_bo_model.slug] = bo_model.get_parent_accessor_from_myself(parent_field)
 
-    ######################################################################
-    # View Registration
-    ######################################################################
-    slug_to_bo_view = None
-
-    def register_view(self, bo_view):
+    def api_get_model(self, request):
         """
-        Registers a ``BackOfficeView`` implementation class with this
-        backoffice.
+        API call to retrieve a serialized Django model instance using his
+        ``BackOfficeModel`` implementation.
 
-        :param bo_view: a ``BackOfficeView`` implementation class
+        :param request: ``request.view_params with 'model_slug' and 'pk'``
+        :return: a serialized Django model instance using his
+        ``BackOfficeModel`` implementation.
         """
-        if not self.slug_to_bo_view:
-            self.slug_to_bo_view = {}
+        model_slug = request.view_params.get('model_slug')
+        pk = request.view_params.get('pk')
+        bo_model = self.get_model(slug=model_slug)
+        if not check_permission(request, bo_model.permission):
+            return HttpResponse(u'You are not allowed to view this page.', status=403)
+        obj = bo_model.model.objects.get(pk=pk)
+        serialized = bo_model.get_serialized(request, obj, children=True, parents=True, siblings=True, templates=True)
+        return serialized
 
-        if not bo_view.slug in self.slug_to_bo_view:
-            bo_view_instance = bo_view()
-            self.slug_to_bo_view[bo_view.slug] = bo_view_instance
-
-    def get_view(self, slug):
+    def api_post_model_action(self, request):
         """
-        Gets a registered ``BackOfficeView`` implementation instance by slug.
-        """
-        return self.slug_to_bo_view.get(slug, None)
+        Performs an action to a given view.
 
-    ######################################################################
-    # Search
-    ######################################################################
+        :param request: ``request.view_params with 'method', 'params' and 'view_params'``
+        :return: the results of the called view method.
+        """
+        method = request.view_params.get('method')
+        action_params = request.view_params.get('params')
+        model_slug = request.view_params.get('model')
+
+        # Attach the actual view_params and action_params to the request.
+        request.action_params = action_params
+
+        bo_model = self.get_model(slug=model_slug)
+
+        # Prevent posting to this view if not allowed to access this view
+        if not check_permission(request, bo_model.permission):
+            return HttpResponse(u'You are not allowed to post data to the model "%s".' % bo_model.slug, status=403)
+
+        fn = getattr(bo_model, method, None)
+        if not fn:
+            raise Http404(u'Cannot find method %s on model %s' % (method, bo_model.slug))
+        return fn(request)
+
+
+class SearchMixin(object):
+    """
+    This mixin implements support for searching through BackOfficeModels.
+    """
+
     def serialize_search_result(self, request, index):
         """
         Transforms a ``SearchIndex`` instance to a serialized ``BackOfficeModel``
@@ -437,7 +602,6 @@ class BackOfficeBase(object):
                       if i.model_slug in self.slug_to_bo_model)
         return [s for s in serialized if s]
 
-
     def search(self, request, query, filter_on_model_slug=None, page=1, page_size=20, include_counts=True):
         """
         Performs a search on Django models registered with this backoffice.
@@ -479,9 +643,6 @@ class BackOfficeBase(object):
             for obj in bo_model.model.objects.all():
                 bo_model.reindex(obj, self.name)
 
-    ######################################################################
-    # Internal JSON API
-    ######################################################################
     def api_get_search(self, request):
         """
         API call implementation for ``self.search()``. It passes on ``q``,
@@ -508,23 +669,87 @@ class BackOfficeBase(object):
         return self.search(request, q, page_size=10, filter_on_model_slug=filter_model,
                            include_counts=False)
 
-    def api_get_model(self, request):
-        """
-        API call to retrieve a serialized Django model instance using his
-        ``BackOfficeModel`` implementation.
 
-        :param request: ``request.view_params with 'model_slug' and 'pk'``
-        :return: a serialized Django model instance using his
-        ``BackOfficeModel`` implementation.
+class BackOfficeView(object):
+    slug = AutoSlug(remove_suffix='View')
+    template = AutoTemplate('views', remove_suffix='View')
+
+    permission = None
+
+    def serialize(self, content, extra_context=None):
+        if isinstance(content, str):
+            content = content.decode('utf-8')
+
+        context = {
+            'slug': self.slug,
+            'content': content + random_token(),
+        }
+        if extra_context:
+            context.update(extra_context)
+        return context
+
+    def serialize_view_result(self, request, result):
+        content, extra_context = result, {}
+        if isinstance(result, tuple):
+            content, extra_context = result
+        if isinstance(content, HttpResponse):
+            if hasattr(content, 'render'):
+                content.render()
+            content = content.content
+        return self.serialize(content, extra_context)
+
+    def get_serialized(self, request):
+        return self.serialize_view_result(request, self.get(request))
+
+    def get_serialized_post(self, request):
+        return self.serialize_view_result(request, self.post(request))
+
+    def get_context(self, request):
+        context = {}
+        context.update(self.get_extra_context(request))
+        context.update({'view_slug': self.slug})
+        return context
+
+    def get_extra_context(self, request):
+        return {}
+
+    def get(self, request):
+        return render(request, self.template, self.get_context(request))
+
+    def post(self, request):
+        raise NotImplementedError
+
+    def FOO(self, request):
+        raise NotImplementedError
+
+
+class ViewMixin(object):
+    """
+    This mixin implements support for BackOfficeViews.
+    """
+
+    #: The internal view registration dict
+    slug_to_bo_view = None
+
+    def register_view(self, bo_view):
         """
-        model_slug = request.view_params.get('model_slug')
-        pk = request.view_params.get('pk')
-        bo_model = self.get_model(slug=model_slug)
-        if not check_permission(request, bo_model.permission):
-            return HttpResponse(u'You are not allowed to view this page.', status=403)
-        obj = bo_model.model.objects.get(pk=pk)
-        serialized = bo_model.get_serialized(request, obj, children=True, parents=True, siblings=True, templates=True)
-        return serialized
+        Registers a ``BackOfficeView`` implementation class with this
+        backoffice.
+
+        :param bo_view: a ``BackOfficeView`` implementation class
+        """
+        if not self.slug_to_bo_view:
+            self.slug_to_bo_view = {}
+
+        if not bo_view.slug in self.slug_to_bo_view:
+            bo_view_instance = bo_view()
+            self.slug_to_bo_view[bo_view.slug] = bo_view_instance
+
+    def get_view(self, slug):
+        """
+        Gets a registered ``BackOfficeView`` implementation instance by slug.
+        """
+        return self.slug_to_bo_view and self.slug_to_bo_view.get(slug, None)
 
     def api_get_view(self, request):
         """
@@ -618,332 +843,154 @@ class BackOfficeBase(object):
         return self.api_get_view_view(request)
 
 
-class BackOfficeTab(object):
+class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
     """
-    A tab that will be shown for a ``BackOfficeModel``. A ``BackOfficeModel`` can
-    have some tabs associated with it. Each tab is represented by:
-
-    *   ``slug``: The unique (inside a model) slug for a tab.
-        Used for navigation in the URL.
-    *   ``title``: A human title that will pe used as the caption for a tab.
-    *   ``template``: The path to a template that must be rendered inside the tab.
-        This template is given the ``instance`` context variable, which contains
-        the current model instance.
+    The base class of a Back Office application. Inherit from this class and
+    define your own custom backoffice!
     """
 
-    slug = AutoSlug(remove_suffix='Tab')
-    title = None
-    template = None
-    permission = None
+    #: The title of the BackOffice application. This is used on pages that
+    #: inherit from the ``model_template``.
+    title = 'Untitled Backoffice'
 
-    def __init__(self, slug, title, template=None, permission=None, shadow=None, context=None):
-        self.slug = slug
-        self.title = title
-        self.template = template
-        self.shadow = shadow
-        self.permission = permission
-        self.context = context or {}
+    #: The template file that will be used to show models. It has to define
+    #: an ng-view inside of it. Please extend the default template if you
+    #: want to specify your own navigation (which you will probably want
+    #: to do) and put your own template here.
+    model_template = 'advanced_reports/backoffice/model-base.html'
 
-    def get_serialized_meta(self):
-        return {
-            'slug': self.slug,
-            'title': self.title,
-            'shadow': self.shadow
-        }
-
-    def get_serialized(self, request, instance):
-        context = {'instance': instance}
-        context.update(self.context)
-        template = self.template or 'advanced_reports/backoffice/default-tab.html'
-        return {
-            'slug': self.slug,
-            'title': self.title,
-            'template': render_to_string(template, context,
-                                         context_instance=RequestContext(request)) + random_token(),
-            'shadow': self.shadow
-        }
-
-    def __repr__(self):
-        return 'BackOfficeTab(%r, %r, %r, permission=%r, shadow=%r, context=%r)' \
-               % (self.slug, self.title, self.template, self.permission, self.shadow, self.context)
-
-
-class BackOfficeModel(object):
-    """
-    The base class for a ``BackOfficeModel`` implementation. Implement this
-    class and register your own Django models to a backoffice.
-    """
-
-    #: A unique slug to identify a model ('user', 'sim', ...)
-    slug = AutoSlug(remove_suffix='Model')
-
-    #: The actual Django model that is being used
-    model = None
-
-    #: (optional) The name of a ``ForeignKey`` that points to a parent object.
-    #: If this parent is registered with the same backoffice, they are shown as
-    #: a parent/child relation.
-    parent_field = None
-
-    #: (optional) The plural version of parent_field.
-    parent_fields = None
-
-    #: Verbose name for displaying purposes. Should be lowercase. E.g. 'user'
-    verbose_name = None
-
-    #: Plural verbose name for displaying purposes. Should be lowercase. E.g. 'users'
-    verbose_name_plural = None
-
-    #: A mapping of slugs to ``BackOfficeModel`` implementation instances
-    #: to represent kinds of children. This property will be automatically filled
-    #: when you register your parent and child models with a BackOfficeBase
-    #: implementation instance.
-    children = None
-    child_to_accessor = None
-
-    #: A mapping of slugs to ``BackOfficeModel`` implementation instances
-    #: to represent kinds of parents. This property will be automatically filled
-    #: when you register your parent and child models with a BackOfficeBase
-    #: implementation instance.
-    parents = None
-    parent_to_accessor = None
-
-    #: Include siblings of specified parent slug in serialization.
-    siblings = None
-
-    #: Define a priority that will be used for displaying purposes.
-    #: Can also be used as a way to sort models by kind, if used uniquely.
-    priority = 999
-
-    #: For displaying purposes. Will probably change, so leave alone.
-    has_header = True
-
-    #: For displaying purposes. Will probably change, so leave alone.
-    collapsed = True
-
-    #: Whether we want to appear as a menu of children in the parent view
-    show_in_parent = False
-
-    #: An optional template path to render a header for a model instance
-    #: above the tabs.
-    header_template = None
-
-    #: A tuple of ``BackOfficeTab`` instances. These tabs can contain templates
-    #: which in turn can display extra information about this model.
-    tabs = ()
-
-    #: When you have overridden ``search_index`` and included child objects
-    #: in your search index (e.g. comments on a user) you can define these
-    #: child models to trigger a reindex when a child changes.
-    #: Example: ``{Comment: (lambda c: c.content_object, User)}``.
-    #: In the value of this dictionary you define a tuple with a function
-    #: which knows how to find the parent object and a model type to make
-    #: sure we are getting the right argument to our ``search_index``
-    #: implementation.
-    search_index_dependencies = {}
-
-    #: An optional string containing a permission which has to be checked
-    #: against the request that queries this model. If the permission is
-    #: not satisfied, the model will not show up in search results and
-    #: will never display.
-    permission = None
-
-    def __init__(self):
-        self.children = {}
-        self.child_to_accessor = {}
-        self.parents = {}
-        self.parent_to_accessor = {}
-
-    def get_title(self, instance):
+    def __init__(self, name='backoffice', app_name='backoffice'):
         """
-        A textual representation of a model instance to be used as a title.
+        Constructor for a BackOfficeBase implementation.
+
+        :param name: the instance name for this implementation used for
+        Django url namespacing.
+        :param app_name: the app name for this implementation. In most cases
+        can be just left alone.
+        :return: a BackOfficeBase implementation instance.
         """
-        return unicode(instance)
+        self.name = name
+        self.app_name = app_name
 
-    def serialize(self, instance):
+    def define_urls(self):
         """
-        Override this to add extra information to be exposed to the Angular
-        side of your tab templates.
+        Implement this to add some custom url patterns to a backoffice.
+        They will automatically get the proper namespacing. For example,
+        if your backoffice is called "helpdesk" and your url is called
+        "stats", you must use ``{% url 'helpdesk:stats' %}`` in your
+        templates.
+
+        :return: a tuple/list of url patterns (not using ``patterns()``!)
         """
-        return {}
-
-    def render_template(self, request, instance):
-        if self.header_template:
-            context = {
-                'instance': instance
-            }
-            return render_to_string(self.header_template, context,
-                                    context_instance=RequestContext(request))
-        return u''
-
-    def get_parent_model_slug_for_field(self, parent_field):
-        return None
-
-    def get_parent_accessor_to_myself(self, parent_field):
-        parent_django_field = self.model._meta.get_field(parent_field)
-        return parent_django_field.rel.related_name \
-            or '%s_set' % self.model.__name__.lower()
-
-    def get_parent_accessor_from_myself(self, parent_field):
-        return parent_field
-
-    def get_route(self, instance):
-        return {'model': self.slug, 'id': instance.pk}
-
-    def get_serialized(self, request, instance, children=False, parents=False, siblings=False, templates=False):
-        serialized = {
-            'id': instance.pk,
-            'title': self.get_title(instance),
-            'model': self.slug,
-            'route': self.get_route(instance),
-            'is_object': True,
-            'meta': self.serialize_meta(request)
-        }
-
-        if templates:
-            serialized['tabs'] = dict((t.slug, t.get_serialized(request, instance)) \
-                                 for t in self.tabs \
-                                 if check_permission(request, t.permission))
-            serialized['header_template'] = self.render_template(request, instance) + random_token()
-
-        if children:
-            serialized['children'] = self.get_children(request, instance)
-
-        if parents:
-            serialized['parents'] = self.get_parents(request, instance)
-
-        if self.siblings and siblings:
-            parent_bo_model = self.parents[self.siblings]
-            parent = self.get_parent_by_model(request, instance, parent_bo_model)
-            serialized['siblings'] = parent_bo_model.get_serialized_children_by_model(request, parent, self, exclude_meta=True)
-
-        serialized.update(self.serialize(instance))
-        return serialized
+        return ()
 
     @property
-    def parent_fields_list(self):
-        return self.parent_fields or self.parent_field and [self.parent_field]
+    def urls(self):
+        """
+        The actual url patterns for this backoffice. You can include
+        these in your main urlconf.
 
-    def get_children_by_model(self, request, instance, bo_model):
-        if not instance or not check_permission(request, bo_model.permission):
-            return []
-        return getattr(instance, self.child_to_accessor[bo_model.slug]).all()
+        :return: url patterns
+        """
+        return patterns('',
+                        url(r'^$', self.decorate(self.home), name='home'),
+                        url(r'^logout/$', self.logout, name='logout'),
+                        url(r'^api/(?P<method>[^/]+)/$', self.decorate(self.api), name='api'),
+                        url(r'^api/$', self.decorate(self.api), name='api_home'),
+                        url(r'^login/as/(?P<user_id>\d+)/$', self.decorate(self.login_as), name='login_as'),
+                        url(r'^end/login/as/$', self.end_login_as, name='end_login_as'),
+                        *self.define_urls()
+        ), self.app_name, self.name
 
-    def get_serialized_children_by_model(self, request, instance, bo_model, exclude_meta=False):
-        if not check_permission(request, bo_model.permission):
-            return []
-        children = self.get_children_by_model(request, instance, bo_model)
-        serialized_children = [bo_model.get_serialized(request, c) for c in children]
-        if bo_model.has_header and not exclude_meta:
-            serialized = bo_model.serialize_meta(request)
-            serialized['children'] = serialized_children
-            return [serialized]
-        else:
-            return serialized_children
+    def decorate(self, view):
+        """
+        Implement this to add some custom decoration for the internal
+        Django views for this backoffice.
 
-    def get_parent_by_model(self, request, instance, bo_model):
-        if not check_permission(request, bo_model.permission):
-            return None
-        parent = getattr(instance, self.parent_to_accessor[bo_model.slug])
-        if parent is None:
-            return None
-        if not isinstance(parent, bo_model.model):
-            return None
-        return parent
+        :param view: the view to decorate
+        :return: the decorated view
+        """
+        # TODO: add permissions
+        return staff_member_required(self)(view)
 
-    def get_serialized_parent_by_model(self, request, instance, bo_model):
-        if not check_permission(request, bo_model.permission):
-            return None
-        parent = self.get_parent_by_model(request, instance, bo_model)
-        return bo_model.get_serialized(request, parent) if parent else None
+    def default_context(self):
+        """
+        Default template context values for internal backoffice page.
 
-    def serialize_meta(self, request):
-        return {
-            'slug': self.slug,
-            'verbose_name': self.verbose_name,
-            'verbose_name_plural': self.verbose_name_plural,
-            'has_header': self.has_header,
-            'collapsed': self.collapsed,
-            'show_in_parent': self.show_in_parent,
-            'tabs': [t.get_serialized_meta() for t in self.tabs if check_permission(request, t.permission)],
-            'is_meta': True
-        }
+        :return: context dict
+        """
+        return {'backoffice': self,
+                'api_url': reverse(self.name + ':api_home', current_app=self.app_name),
+                'root_url': reverse(self.name + ':home', current_app=self.app_name)}
 
-    def get_children(self, request, instance):
-        if not self.children:
-            return ()
-        child_models = sorted(self.children.values(), key=lambda m: m.priority)
-        return sum((self.get_serialized_children_by_model(request, instance, m) for m in child_models), [])
+    @never_cache
+    def logout(self, request, *args, **kwargs):
+        """
+        Calls ``django.contrib.auth.views.logout`` with a custom template and
+        extra context.
+        """
+        from django.contrib.auth.views import logout
+        kwargs['template_name'] = 'advanced_reports/backoffice/logout.html'
+        kwargs['extra_context'] = self.default_context()
+        return logout(request, *args, **kwargs)
 
-    def get_parents(self, request, instance):
-        if not self.parents:
-            return ()
-        parent_models = sorted(self.parents.values(), key=lambda m: m.priority)
-        parents = (self.get_serialized_parent_by_model(request, instance, parent_model) for parent_model in parent_models)
-        return [parent for parent in parents if parent]
+    def home(self, request):
+        """
+        The main Django view for this backoffice.
+        """
+        return render_to_response(self.model_template,
+                                  self.default_context(),
+                                  context_instance=RequestContext(request))
 
-    def reindex(self, instance, backoffice_instance):
-        index_text = self.search_index(instance)
-        index, created = SearchIndex.objects.get_or_create(backoffice_instance=backoffice_instance,
-                                                           model_slug=self.slug,
-                                                           model_id=instance.pk,
-                                                           defaults={'to_index': index_text})
-        if not created:
-            index.to_index = index_text
-            index.save()
+    # Impersonation
+    def login_as(self, request, user_id):
+        me_id = request.session.get('impersonation_original_user', None)
+        me = User.objects.get(pk=me_id) if me_id else request.user
+        user = get_object_or_404(User, pk=user_id)
+        user.backend = 'django.contrib.auth.backends.ModelBackend'
+        login(request, user)
+        request.session['impersonation_original_user'] = me.pk
+        request.session['impersonating'] = True
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
-    def delete_index(self, instance, backoffice_instance):
-        try:
-            index = SearchIndex.objects.get(backoffice_instance=backoffice_instance,
-                                            model_slug=self.slug,
-                                            model_id=instance.pk)
-            index.delete()
-        except ObjectDoesNotExist:
-            pass
+    def end_login_as(self, request):
+        if 'impersonation_original_user' in request.session:
+            me_id = request.session['impersonation_original_user']
+            me = get_object_or_404(User, pk=me_id)
+            me.backend = 'django.contrib.auth.backends.ModelBackend'
+            del request.session['impersonation_original_user']
+            del request.session['impersonating']
+            login(request, me)
+            return redirect(reverse('backoffice:home', current_app=self.name))
+        return redirect(settings.LOGIN_REDIRECT_URL)
 
-    def search_index(self, instance):
-        return unicode(instance)
+    def api(self, request, method=None):
+        """
+        A very simple REST-like API implementation which just passes requests
+        on to the right functions.
 
+        An instance of ``advanced_reports.backoffice.api_utils.ViewRequestParameters``
+        will be assigned to the ``request`` as ``view_params``.
 
-class BackOfficeView(object):
-    slug = AutoSlug(remove_suffix='View')
-    template = AutoTemplate(remove_suffix='View')
+        :param request: A HTTP request where ``view_params`` will be attached to.
+        :param method: The actual instance method of this backoffice class that will
+        be called.
+        :return: a JSONResponse
+        """
+        if not method:
+            return JSONResponse(None)
 
-    permission = None
+        request.view_params = ViewRequestParameters(request)
 
-    def serialize(self, content, extra_context=None):
-        if isinstance(content, str):
-            content = content.decode('utf-8')
+        fn = getattr(self, 'api_%s_%s' % (request.method.lower(), method), None)
+        if fn is None:
+            raise Http404
 
-        context = {
-            'slug': self.slug,
-            'content': content + random_token(),
-        }
-        if extra_context:
-            context.update(extra_context)
-        return context
+        response = fn(request)
 
-    def serialize_view_result(self, request, result):
-        content, extra_context = result, {}
-        if isinstance(result, tuple):
-            content, extra_context = result
-        if isinstance(content, HttpResponse):
-            if hasattr(content, 'render'):
-                content.render()
-            content = content.content
-        return self.serialize(content, extra_context)
+        if isinstance(response, HttpResponse):
+            return response
 
-    def get_serialized(self, request):
-        return self.serialize_view_result(request, self.get(request))
+        msgs = [m.__dict__ for m in messages.get_messages(request)]
+        return JSONResponse({'messages': msgs, 'response_data': response})
 
-    def get_serialized_post(self, request):
-        return self.serialize_view_result(request, self.post(request))
-
-    def get(self, request):
-        return render(request, self.template, {'view_slug': self.slug})
-
-    def post(self, request):
-        raise NotImplementedError
-
-    def FOO(self, request):
-        raise NotImplementedError

@@ -94,7 +94,7 @@
     </div><!-- /.modal -->
 
     <div class="modal fade" tabindex="-1" role="dialog" bo-element="detail_popup">
-        <div class="modal-dialog-extra-padding modal-dialog" style="width: auto;">
+        <div class="modal-dialog-extra-padding modal-dialog" ng-style="detail_action_dialog_style">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
@@ -137,7 +137,7 @@
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-success">{% trans "Execute" %}</button>
+            <button type="submit" class="btn btn-success" ng-disabled="!multiple_action">{% trans "Execute" %}</button>
         </form>
     </div>
 
@@ -169,7 +169,7 @@
                         <a href ng-bind="column.verbose_name" ng-show="column.sortable" ng-click="change_order(column.order_by)"></a>
                         <span ng-show="report.extra.order_field==column.name" ng-bind="{true:'&darr;', false:'&uarr;'}[report.extra.ascending]"></span>
                     </th>
-                    <th></th>
+                    <th class="col-sm-2"></th>
                 </tr>
             </thead>
 
@@ -180,9 +180,11 @@
                         <a ng-show="select_mode()" href ng-click="view.selected_item=item;trigger_success_attr({method: 'select'})">{% trans "select" %}</a>
                     </td>
                     <td ng-repeat="value in item.values" compile="value.html" ng-style="value.style" ng-class="value.class"></td>
-                    <td ng-show="has_expanded_content(item)">
-                        <a ng-show="item.expanded && !select_mode()" href>{% trans "hide details" %}</a>
-                        <a ng-hide="item.expanded || select_mode()" href>{% trans "show details" %}</a>
+                    <td>
+                        <span ng-show="has_expanded_content(item)">
+                            <a ng-show="item.expanded && !select_mode()" href>{% trans "hide details" %}</a>
+                            <a ng-hide="item.expanded || select_mode()" href>{% trans "show details" %}</a>
+                        </span>
                     </td>
                 </tr>
                 <tr ng-show="multiple_succeeded[item.item_id] && item.expanded" class="success">
@@ -207,7 +209,7 @@
                                 <div class="form-inline" role="form" compile="action.form"></div>
                             </form>
                         </div>
-                        <div compile="item.extra_information" class="extra_info"></div>
+                        <div ng-show="item.extra_information" compile="item.extra_information" class="extra_info"></div>
                     </td>
                     {% endverbatim %}
                 </tr>

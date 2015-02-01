@@ -1,0 +1,22 @@
+<form ng-submit="view.action('add_list', {name: new_list.name}); new_list={}">
+
+    <div class="list-group">
+        {% for todo_list in todo_lists %}
+        <div class="list-group-item">
+            <button class="badge"
+                    type="reset"
+                    ng-click="view.action('remove_list', {id: {{ todo_list.pk }}})">x</button>
+
+            <a link-to="get_url({model: 'todolist', id: {{ todo_list.pk }}})">{{ todo_list.name }}</a>
+        </div>
+        {% endfor %}
+
+        <div class="list-group-item">
+            <input style="width: 100%; border: 0; outline: none;"
+                   type="text"
+                   ng-model="new_list.name"
+                   placeholder="enter a new list here"/>
+        </div>
+    </div>
+
+</form>
