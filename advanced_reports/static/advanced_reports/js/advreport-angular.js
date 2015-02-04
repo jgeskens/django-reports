@@ -254,23 +254,32 @@ angular.module('BackOfficeApp')
             action.form = data;
             $scope.form = action;
             $scope.form.item = item;
+            if ($scope.is_link_action(action)){
+                $scope.form.action = $scope.get_action_view_url(item, action);
+            }else{
+                $scope.form.action = '';
+            }
             $scope.action_form_popup.modal('show');
         }, function(error){});
     };
 
     $scope.execute_action = function(item, action, force){
-        if ($scope.is_link_action(action))
-            return;
-
         if (action.form){
             if (action.form === true){
                 $scope.fetch_form(item, action);
             } else {
                 $scope.form = action;
                 $scope.form.item = item;
+                if ($scope.is_link_action(action)){
+                    $scope.form.action = $scope.get_action_view_url(item, action);
+                }else{
+                    $scope.form.action = '';
+                }
                 $scope.action_form_popup.modal('show');
             }
         } else {
+            if ($scope.is_link_action(action))
+                return;
             var execute = function(){
                 $scope.view.action('action', {method: action.method, pk: item.item_id}, false).then(function(data){
                     $scope.action_confirm_popup.modal('hide');
@@ -323,6 +332,10 @@ angular.module('BackOfficeApp')
     };
 
     $scope.submit_form = function(form) {
+        if ($scope.is_link_action(form)){
+            $scope.action_form_popup.modal('hide');
+            return true;
+        }
         var data = $scope.action_form_form.serialize();
         var item = form.item;
 
@@ -406,9 +419,13 @@ angular.module('BackOfficeApp')
     };
 
     $scope.get_action_link = function(item, action){
-        if ($scope.is_link_action(action))
-            return $scope.view.action_link('action_view', {report_method: action.method, pk: item.item_id});
+        if ($scope.is_link_action(action) && !action.form)
+            return $scope.get_action_view_url(item, action);
         return '';
+    };
+
+    $scope.get_action_view_url = function(item, action){
+        return $scope.view.action_link('action_view', {report_method: action.method, pk: item.item_id});
     };
 
     $scope.select_mode = function(){

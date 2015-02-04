@@ -423,6 +423,8 @@ class AdvancedReport(object):
                 self.verbose_name = model._meta.verbose_name
             if not self.verbose_name_plural:
                 self.verbose_name_plural = model._meta.verbose_name_plural
+            if not self.title:
+                self.title = capfirst(self.verbose_name_plural)
 
             # Add defaults from the model admin
             model_admin = admin.site._registry.get(model)
@@ -434,6 +436,7 @@ class AdvancedReport(object):
                     self.search_fields = model_admin.search_fields
                 if not self.sortable_fields:
                     self.sortable_fields = model_admin.list_display
+
 
 
     def queryset(self):

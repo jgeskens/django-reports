@@ -21,6 +21,8 @@ class UserReport(AdvancedReport):
         action(method='send_reminder_email', verbose_name='Send reminder email', individual_display=False),
     )
     multiple_actions = True
+    template = 'advanced_reports/bootstrap/report.html'
+    item_template = 'advanced_reports/bootstrap/item.html'
 
     def queryset_request(self, request):
         return User.objects.all()
@@ -55,6 +57,10 @@ class NoModel(object):
         return self.value * self.value
 
 
+class CSVForm(forms.Form):
+    filename = forms.CharField(initial='numbers.csv', required=True)
+
+
 class NoModelReport(AdvancedReport):
     verbose_name = 'number'
     verbose_name_plural = 'numbers'
@@ -64,7 +70,8 @@ class NoModelReport(AdvancedReport):
 
     item_actions = (
         action(method='calculate_sum', verbose_name='Calculate sum', individual_display=False),
-        action(method='export_as_csv_view', verbose_name='Export selection as CSV', individual_display=False)
+        action(method='export_as_csv_view', verbose_name='Export selection as CSV',
+               individual_display=True, form=CSVForm, form_via_ajax=True)
     )
 
     def queryset_request(self, request):
@@ -81,6 +88,9 @@ class NoModelReport(AdvancedReport):
             'dialog_content': 'The sum is: %d' % sum((item.value for item in items)),
             'dialog_style': {'width': '300px'}
         }
+
+    def export_as_csv_view(self, item):
+        return self.export_as_csv_view_multiple([item])
 
     def export_as_csv_view_multiple(self, items):
         import csv
