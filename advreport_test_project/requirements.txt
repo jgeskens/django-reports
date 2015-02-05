@@ -6,3 +6,4 @@ Pygments==2.0.1
 -e git+http://github.com/jgeskens/bo-querybuilder.git#egg=bo-querybuilder
 -e git+https://github.com/vikingco/django-template-tags.git#egg=django-template-tags
 coverage==3.7.1
+coveralls
