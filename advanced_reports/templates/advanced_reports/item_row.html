@@ -1,4 +1,5 @@
 {% load i18n %}
+{% load cycle from future %}
 <tr class="{% cycle "" "alternate" %} information-row table-row {{ object.advreport_class }}">
     {% if advreport.multiple_actions %}
     <td>

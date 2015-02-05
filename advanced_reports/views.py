@@ -345,7 +345,8 @@ def _action_dict(request, o, action):
 def _item_values(request, o, advreport):
     return {
         'values': o.advreport_column_values,
-        'extra_information': o.advreport_extra_information.replace('data-method="', 'ng-bind-html-unsafe="lazydiv__%s__' % advreport.get_item_id(o)),
+        'extra_information': o.advreport_extra_information.replace('data-method="',
+                                                                   'ng-bind-html-unsafe="lazydiv__%s__' % advreport.get_item_id(o)),
         'actions': [_action_dict(request, o, a) for a in o.advreport_actions],
         'item_id': advreport.get_item_id(o)
     }
@@ -378,7 +379,9 @@ def api_list(request, slug, ids=None):
             'field_metadata': advreport.get_field_metadata_dict(),
             'report_header_visible': advreport.report_header_visible,
             'multiple_actions': advreport.multiple_actions,
-            'multiple_action_list': [a.attrs_dict for a in advreport.item_actions if _is_allowed_multiple_action(request, a)],
+            'multiple_action_list': [
+                a.attrs_dict for a in advreport.item_actions if _is_allowed_multiple_action(request, a)
+            ],
         }
         return JSONResponse(report)
 

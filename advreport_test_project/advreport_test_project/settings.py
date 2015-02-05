@@ -131,6 +131,7 @@ INSTALLED_APPS = (
     'widget_tweaks',
     'django_ajax',
     'django_template_tags',
+    'djprogress',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'

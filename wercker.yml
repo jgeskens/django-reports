@@ -27,8 +27,7 @@ build:
             name: build
             code: |
                 python setup.py develop
-                cd advreport_test_project
-                python manage.py test advanced_reports
+                python advreport_test_project/manage.py test
 deploy:
     steps:
         - virtualenv:

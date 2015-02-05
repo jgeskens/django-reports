@@ -1230,3 +1230,8 @@ class Resolver(object):
     def __getitem__(self, k):
         from django.template import Variable
         return Variable(k).resolve(self.context)
+
+
+class BootstrapReport(AdvancedReport):
+    template = 'advanced_reports/bootstrap/report.html'
+    item_template = 'advanced_reports/bootstrap/item.html'
