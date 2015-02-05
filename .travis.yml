@@ -5,5 +5,5 @@ install:
   - pip install -r advreport_test_project/requirements.txt
   - python setup.py develop
 script:
-  - python advreport_test_project/manage.py test
-
+  - coverage run --source=advanced_reports --omit='*migrations*' advreport_test_project/manage.py test
+after_success: coveralls
