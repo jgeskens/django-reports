@@ -3,11 +3,11 @@ from django.conf import settings
 
 # This is done for compatibility with other databases, mainly for testing.
 if 'postgresql' in settings.DATABASES['default'].get('ENGINE', ''):
-    from djorm_pgfulltext.fields import VectorField
-    from djorm_pgfulltext.models import SearchManager
+    from djorm_pgfulltext.fields import VectorField # pragma: no cover
+    from djorm_pgfulltext.models import SearchManager # pragma: no cover
 else:
-    VectorField = lambda: u''
-    SearchManager = lambda *a, **kw: models.Manager()
+    VectorField = lambda: u'' # pragma: no cover
+    SearchManager = lambda *a, **kw: models.Manager() # pragma: no cover
 
 
 class SearchIndex(models.Model):

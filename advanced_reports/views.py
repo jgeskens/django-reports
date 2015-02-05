@@ -78,9 +78,9 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
         # CSV?
         if 'csv' in request.GET:
             try:
-                from djprogress import with_progress
-            except ImportError:
-                with_progress = lambda it, **kw: it
+                from djprogress import with_progress # pragma: no cover
+            except ImportError: # pragma: no cover
+                with_progress = lambda it, **kw: it # pragma: no cover
             # Avoid microsoft SYLK problem http://support.microsoft.com/kb/215591
             _mark_safe = lambda s: s if unicode(s) != u'ID' else u'"%s"' % s
             object_count = len(object_list)
