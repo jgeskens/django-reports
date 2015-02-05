@@ -59,23 +59,6 @@ angular.module('BackOfficeApp')
             angular.forEach($scope.report.multiple_action_list, function(value){
                 $scope.multiple_action_dict[value.method] = value;
             });
-
-            // Handle the form_validation_from_session
-            if ($scope.report.form_validation_from_session){
-                $scope.form = $scope.report.form_validation_from_session.action;
-                $scope.form.form = $scope.report.form_validation_from_session.response_form;
-                $scope.form.item = $scope.report.form_validation_from_session.item;
-                if ($scope.is_link_action($scope.form)){
-                    $scope.form.action = $scope.get_action_view_url($scope.form.item, $scope.form);
-                }else{
-                    $scope.form.action = '';
-                }
-                setTimeout(function(){
-                    $scope.action_form_popup.modal('show');
-                }, 1000);
-
-                console.log($scope.report.form_validation_from_session);
-            }
         }, function(error){
             $scope.error = error;
         });
@@ -271,11 +254,6 @@ angular.module('BackOfficeApp')
             action.form = data;
             $scope.form = action;
             $scope.form.item = item;
-            if ($scope.is_link_action(action)){
-                $scope.form.action = $scope.get_action_view_url(item, action);
-            }else{
-                $scope.form.action = '';
-            }
             $scope.action_form_popup.modal('show');
         }, function(error){});
     };
@@ -287,11 +265,6 @@ angular.module('BackOfficeApp')
             } else {
                 $scope.form = action;
                 $scope.form.item = item;
-                if ($scope.is_link_action(action)){
-                    $scope.form.action = $scope.get_action_view_url(item, action);
-                }else{
-                    $scope.form.action = '';
-                }
                 $scope.action_form_popup.modal('show');
             }
         } else {
@@ -349,20 +322,24 @@ angular.module('BackOfficeApp')
     };
 
     $scope.submit_form = function(form) {
-        if ($scope.is_link_action(form)){
-            $scope.action_form_popup.modal('hide');
-            return true;
-        }
         var data = $scope.action_form_form.serialize();
         var item = form.item;
 
         $scope.view.action('action', {method: form.method, pk: item.item_id, data: data}, false).then(function(result){
             if (result.success){
-                $scope.update_item(item, result, form.next_on_success);
-                $scope.show_success(result.success);
-                $scope.trigger_success_attr(form);
-                $scope.form = null;
-                $scope.action_form_popup.modal('hide');
+                if (result.link_action){
+                    $scope.action_form_popup.modal('hide');
+                    window.location.href = $scope.get_action_view_url(
+                        result.item,
+                        result.link_action,
+                        result.link_action.data);
+                }else{
+                    $scope.update_item(item, result, form.next_on_success);
+                    $scope.show_success(result.success);
+                    $scope.trigger_success_attr(form);
+                    $scope.form = null;
+                    $scope.action_form_popup.modal('hide');
+                }
             }else{
                 form.form = result.response_form;
                 $scope.form = form;
@@ -441,8 +418,12 @@ angular.module('BackOfficeApp')
         return '';
     };
 
-    $scope.get_action_view_url = function(item, action){
-        return $scope.view.action_link('action_view', {report_method: action.method, pk: item.item_id});
+    $scope.get_action_view_url = function(item, action, extra_params){
+        var default_data = {report_method: action.method, pk: item.item_id};
+        if (extra_params !== undefined){
+            default_data = angular.extend(default_data, extra_params);
+        }
+        return $scope.view.action_link('action_view', default_data);
     };
 
     $scope.select_mode = function(){
