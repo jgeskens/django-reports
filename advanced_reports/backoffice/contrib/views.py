@@ -59,10 +59,12 @@ class AdvancedReportView(BackOfficeView):
         method = request.view_params.get('report_method')
         pk = request.view_params.get('pk')
 
-        advreport = get_report_for_slug(report_slug)
-        item = advreport.get_item_for_id(pk)
-        advreport.enrich_object(item, request=request)
-        return getattr(advreport, method)(item)
+        return api_action(request, report_slug, method, int(pk))
+
+        # advreport = get_report_for_slug(report_slug)
+        # item = advreport.get_item_for_id(pk)
+        # advreport.enrich_object(item, request=request)
+        # return getattr(advreport, method)(item)
 
     def multiple_action(self, request):
         report_slug = request.view_params.get('slug')

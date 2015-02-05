@@ -22,7 +22,7 @@
         <div class="modal-dialog-extra-padding modal-dialog">
             <div class="modal-content">
                 {% verbatim %}
-                <form bo-element="action_form_form" action="{{ form.action }}" method="post" target="_blank">
+                <form bo-element="action_form_form" action="{{ form.action }}" method="post">
                 {% endverbatim %}
                     {% csrf_token %}
                     <div class="modal-header">

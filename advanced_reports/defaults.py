@@ -430,11 +430,11 @@ class AdvancedReport(object):
             model_admin = admin.site._registry.get(model)
             if model_admin:
                 self.model_admin = model_admin
-                if self.fields is None:
+                if self.fields is None and model_admin.list_display:
                     self.fields = model_admin.list_display
-                if not self.search_fields:
+                if not self.search_fields and model_admin.search_fields:
                     self.search_fields = model_admin.search_fields
-                if not self.sortable_fields:
+                if not self.sortable_fields and model_admin.list_display:
                     self.sortable_fields = model_admin.list_display
 
 
@@ -871,8 +871,11 @@ class AdvancedReport(object):
             return self.queryset()
 
     def get_sorted_queryset(self, by_field, request=None):
-        field_name = by_field.split('__')[0].split(',')[0]
-        field_name = field_name[1:] if field_name[0] == '-' else field_name
+        if by_field != '__str__':
+            field_name = by_field.split('__')[0].split(',')[0]
+            field_name = field_name[1:] if field_name[0] == '-' else field_name
+        else:
+            field_name = 'pk'
         if self.get_model_field(field_name) is None:
             return self._queryset(request)
         return self._queryset(request).order_by(*by_field.split(','))

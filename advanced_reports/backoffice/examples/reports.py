@@ -89,10 +89,10 @@ class NoModelReport(AdvancedReport):
             'dialog_style': {'width': '300px'}
         }
 
-    def export_as_csv_view(self, item):
-        return self.export_as_csv_view_multiple([item])
+    def export_as_csv_view(self, item, form):
+        return self.export_as_csv_view_multiple([item], filename=form.cleaned_data['filename'])
 
-    def export_as_csv_view_multiple(self, items):
+    def export_as_csv_view_multiple(self, items, filename='numbers.csv'):
         import csv
         response = HttpResponse()
         writer = csv.writer(response, dialect='excel')
@@ -100,6 +100,6 @@ class NoModelReport(AdvancedReport):
         for item in items:
             writer.writerow((item.value, item.square))
         response['Content-Type'] = 'application/csv'
-        response['Content-Disposition'] = 'attachment; filename="numbers.csv"'
+        response['Content-Disposition'] = 'attachment; filename="%s"' % filename
         return response
 

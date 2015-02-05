@@ -360,6 +360,12 @@ def api_list(request, slug, ids=None):
     advreport.set_request(request)
 
     def inner(request, slug, ids):
+        form_validation = request.session.get('advanced_reports_form_validation', None)
+        if form_validation and form_validation['slug'] == slug:
+            del request.session['advanced_reports_form_validation']
+        else:
+            form_validation = None
+
         object_list, extra_context = advreport.get_object_list(request, ids=ids)
 
         paginated = paginate(request, object_list, num_per_page=advreport.items_per_page, use_get_parameters=True)
@@ -379,7 +385,8 @@ def api_list(request, slug, ids=None):
             'field_metadata': advreport.get_field_metadata_dict(),
             'report_header_visible': advreport.report_header_visible,
             'multiple_actions': advreport.multiple_actions,
-            'multiple_action_list': [a.attrs_dict for a in advreport.item_actions if _is_allowed_multiple_action(request, a)]
+            'multiple_action_list': [a.attrs_dict for a in advreport.item_actions if _is_allowed_multiple_action(request, a)],
+            'form_validation_from_session': form_validation,
         }
         return JSONResponse(report)
 
@@ -409,7 +416,9 @@ def api_action(request, slug, method, object_id):
                     form = a.form(request.POST, request.FILES, prefix=object_id)
 
                 if form.is_valid():
-                    advreport.get_action_callable(a.method)(obj, form)
+                    response = advreport.get_action_callable(a.method)(obj, form)
+                    if response:
+                        return response
                     obj = advreport.get_item_for_id(object_id)
                     context.update({'success': a.get_success_message()})
                 else:
@@ -421,6 +430,12 @@ def api_action(request, slug, method, object_id):
                     context.update({'item': _item_values(request, obj, advreport)})
                 else:
                     context.update({'item': None, 'removed_item_id': object_id})
+
+                if method.endswith('_view'):
+                    context.update({'action': _action_dict(request, obj, a), 'slug': slug})
+                    request.session['advanced_reports_form_validation'] = context
+                    return redirect(request.META['HTTP_REFERER'])
+
                 return JSONResponse(context)
 
             elif a.form is None:

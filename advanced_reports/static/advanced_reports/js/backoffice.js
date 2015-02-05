@@ -6,13 +6,12 @@ app.run(function ($http, $cookies){
 
 app.config(['$routeProvider', '$locationProvider', function($routeProvider, $locationProvider){
     $routeProvider.
-        when('/', {controller: 'EmptyController', templateUrl: '/home.html'}).
-        when('/tab/:tab/', {controller: 'EmptyController'}).
-
-        when('/search/:query', {controller: 'EmptyController', templateUrl: '/search.html', reloadOnSearch: false}).
-        when('/search/:query/:model/', {controller: 'EmptyController', templateUrl: '/search.html', reloadOnSearch: false}).
-        when('/:model/:id/', {controller: 'EmptyController', templateUrl: '/model.html', reloadOnSearch: false}).
-        when('/:model/:id/:tab/', {controller: 'EmptyController', templateUrl: '/model.html', reloadOnSearch: false}).
+        when('/', {templateUrl: '/home.html'}).
+        when('/tab/:tab/', {}).
+        when('/search/:query', {templateUrl: '/search.html', reloadOnSearch: false}).
+        when('/search/:query/:model/', {templateUrl: '/search.html', reloadOnSearch: false}).
+        when('/:model/:id/', {templateUrl: '/model.html', reloadOnSearch: false}).
+        when('/:model/:id/:tab/', {templateUrl: '/model.html', reloadOnSearch: false}).
         when('/:model/:id/:tab/:detail/', {templateUrl: '/model.html', reloadOnSearch: false}).
         otherwise({redirectTo: '/'});
     //$locationProvider.html5Mode(true);
@@ -336,8 +335,6 @@ app.factory('boReverser', ['$route', 'boUtils', function($route, boUtils){
         }
     };
 }]);
-
-app.controller('EmptyController', ['$scope', function($scope){}]);
 
 // http://stackoverflow.com/questions/17417607/angular-ng-bind-html-unsafe-and-directive-within-it
 app.directive('compile', ['$compile', function ($compile){

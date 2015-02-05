@@ -59,6 +59,23 @@ angular.module('BackOfficeApp')
             angular.forEach($scope.report.multiple_action_list, function(value){
                 $scope.multiple_action_dict[value.method] = value;
             });
+
+            // Handle the form_validation_from_session
+            if ($scope.report.form_validation_from_session){
+                $scope.form = $scope.report.form_validation_from_session.action;
+                $scope.form.form = $scope.report.form_validation_from_session.response_form;
+                $scope.form.item = $scope.report.form_validation_from_session.item;
+                if ($scope.is_link_action($scope.form)){
+                    $scope.form.action = $scope.get_action_view_url($scope.form.item, $scope.form);
+                }else{
+                    $scope.form.action = '';
+                }
+                setTimeout(function(){
+                    $scope.action_form_popup.modal('show');
+                }, 1000);
+
+                console.log($scope.report.form_validation_from_session);
+            }
         }, function(error){
             $scope.error = error;
         });
