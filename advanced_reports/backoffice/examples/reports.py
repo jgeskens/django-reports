@@ -90,10 +90,11 @@ class NoModelReport(AdvancedReport):
         }
 
     def export_as_csv_view(self, item, form):
-        return self.export_as_csv_view_multiple([item], filename=form.cleaned_data['filename'])
+        return self.export_as_csv_view_multiple([item], form)
 
-    def export_as_csv_view_multiple(self, items, filename='numbers.csv'):
+    def export_as_csv_view_multiple(self, items, form):
         import csv
+        filename = form.cleaned_data['filename']
         response = HttpResponse()
         writer = csv.writer(response, dialect='excel')
         writer.writerow(('Value', 'Square'))

@@ -299,14 +299,18 @@ def api_form(request, slug, method, object_id):
     advreport.set_request(request)
 
     def inner(request, slug, method, object_id):
-        object = advreport.get_item_for_id(object_id)
-        advreport.enrich_object(object, request=request)
-        a = advreport.find_object_action(object, method)
+        object = object_id and advreport.get_item_for_id(object_id)
+        if object:
+            advreport.enrich_object(object, request=request)
+            a = advreport.find_object_action(object, method)
+        else:
+            a = advreport.find_action(method)
         if a is None or not a.form:
             # No appropriate action found (maybe it was filtered out?)
             raise Http404
-        instance = a.get_form_instance(advreport.get_item_for_id(object_id))
-        a = a.copy_with_instanced_form(advreport, prefix=object_id, instance=instance)
+        instance = object_id and a.get_form_instance(advreport.get_item_for_id(object_id))
+        prefix = object_id or 'actionform'
+        a = a.copy_with_instanced_form(advreport, prefix=prefix, instance=instance)
 
         form_instance = a.form
         rendered_form = a.form_template \
@@ -352,8 +356,9 @@ def _item_values(request, o, advreport):
     }
 
 
-def _is_allowed_multiple_action(request, action):
-    return not action.hidden and not action.form and action.multiple_display and action.is_allowed(request)
+def _is_allowed_multiple_action(request, advreport, action):
+    form_allowed = not action.form or hasattr(advreport, '%s_multiple' % action.method)
+    return not action.hidden and form_allowed and action.multiple_display and action.is_allowed(request)
 
 def api_list(request, slug, ids=None):
     advreport = get_report_or_404(slug)
@@ -380,7 +385,9 @@ def api_list(request, slug, ids=None):
             'report_header_visible': advreport.report_header_visible,
             'multiple_actions': advreport.multiple_actions,
             'multiple_action_list': [
-                a.attrs_dict for a in advreport.item_actions if _is_allowed_multiple_action(request, a)
+                _action_dict(request, None, a) \
+                for a in advreport.item_actions \
+                if _is_allowed_multiple_action(request, advreport, a)
             ],
         }
         return JSONResponse(report)
@@ -395,9 +402,12 @@ def api_action(request, slug, method, object_id):
     advreport.set_request(request)
 
     def inner(request, slug, method, object_id):
-        obj = advreport.get_item_for_id(object_id)
-        advreport.enrich_object(obj, request=request)
-        a = advreport.find_object_action(obj, method)
+        obj = object_id and advreport.get_item_for_id(object_id)
+        if obj:
+            advreport.enrich_object(obj, request=request)
+            a = advreport.find_object_action(obj, method)
+        else:
+            a = advreport.find_action(method)
         if a is None:
             return HttpResponse(_(u'Unsupported action method "%s".' % method), status=404)
         if not a.is_allowed(request):
@@ -405,22 +415,24 @@ def api_action(request, slug, method, object_id):
         context = {}
         try:
             if request.method == 'POST' and a.form is not None:
+                prefix = object_id or 'actionform'
                 if issubclass(a.form, forms.ModelForm):
-                    form = a.form(request.POST, request.FILES, instance=a.get_form_instance(obj), prefix=object_id)
+                    form = a.form(request.POST, request.FILES, instance=a.get_form_instance(obj), prefix=prefix)
                 else:
-                    form = a.form(request.POST, request.FILES, prefix=object_id)
+                    form = a.form(request.POST, request.FILES, prefix=prefix)
 
                 if form.is_valid():
-                    response = advreport.get_action_callable(a.method)(obj, form)
-                    if response:
-                        if method.endswith('_view'):
-                            context['link_action'] = {
-                                'method': method,
-                                'data': request.POST
-                            }
-                        else:
+                    if method.endswith('_view'):
+                        context['link_action'] = {
+                            'method': method,
+                            'data': request.POST
+                        }
+                    else:
+                        response = advreport.get_action_callable(a.method)(obj, form)
+                        if response:
                             return response
-                    obj = advreport.get_item_for_id(object_id)
+
+                    obj = object_id and advreport.get_item_for_id(object_id)
                     context.update({'success': a.get_success_message()})
                 else:
                     context.update({'response_method': method, 'response_form': unicode(form)})
@@ -429,7 +441,7 @@ def api_action(request, slug, method, object_id):
                 if obj:
                     advreport.enrich_object(obj, request=request)
                     context.update({'item': _item_values(request, obj, advreport)})
-                else:
+                elif object_id:
                     context.update({'item': None, 'removed_item_id': object_id})
 
                 return JSONResponse(context)

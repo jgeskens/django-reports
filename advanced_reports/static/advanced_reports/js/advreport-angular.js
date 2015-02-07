@@ -1,5 +1,4 @@
-angular.module('BackOfficeApp')
-.controller('AdvancedReportCtrl', ['$scope', '$http', '$location', 'boUtils', 'boApi', function ($scope, $http, $location, boUtils, boApi){
+angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$http', '$location', 'boUtils', 'boApi', function ($scope, $http, $location, boUtils, boApi){
     $scope.report = null;
     $scope.page_count = null;
     $scope.filters = {};
@@ -194,37 +193,39 @@ angular.module('BackOfficeApp')
         }
     };
 
-    $scope.execute_multiple_action = function(){
-        if (!$scope.multiple_action || $scope.multiple_action == ''){
-            return;
-        }
-        var action = $scope.multiple_action_dict[$scope.multiple_action];
-        $scope.multiple_action = '';
+    $scope.multiple_action_params = function(method){
         var id_list = [];
         angular.forEach($scope.selected, function(value, key){
             if (value){
                 id_list.push(key.toString());
             }
         });
+        return {
+            report_method: method,
+            items: id_list.join(','),
+            global: $scope.report.all_selected_global
+        };
+    };
 
-        if ($scope.is_link_action(action)){
-            var link_params = {
-                report_method: action.method,
-                items: id_list.join(','),
-                global: $scope.report.all_selected_global
-            };
-            var url = $scope.view.action_link('multiple_action_view', link_params);
+    $scope.execute_multiple_action = function(){
+        if (!$scope.multiple_action || $scope.multiple_action == ''){
+            return;
+        }
+        var action = $scope.multiple_action_dict[$scope.multiple_action];
+        var action_params = $scope.multiple_action_params(action.method);
+        
+        if ($scope.is_link_action(action) && !action.form) {
+            $scope.multiple_action = '';
+            var url = $scope.view.action_link('multiple_action_view', action_params);
             window.location.href = url;
+        }else if (action.form){
+            $scope.show_action_form(null, action);
         }else{
+            $scope.multiple_action = '';
             var execute = function(){
                 if (action.confirm){
                     $scope.multiple_action_confirm_popup.modal('hide');
                 }
-                var action_params = {
-                    report_method: action.method,
-                    items: id_list.join(','),
-                    global: $scope.report.all_selected_global
-                };
                 $scope.view.action('multiple_action', action_params, false).then(function(data){
                     if (data.succeeded || data.failed){
                         $scope.multiple_succeeded = data.succeeded;
@@ -250,7 +251,7 @@ angular.module('BackOfficeApp')
     };
 
     $scope.fetch_form = function(item, action){
-        $scope.view.action('form', {method: action.method, pk: item.item_id}, false).then(function(data){
+        $scope.view.action('form', {method: action.method, pk: item && item.item_id || null}, false).then(function(data){
             action.form = data;
             $scope.form = action;
             $scope.form.item = item;
@@ -258,15 +259,19 @@ angular.module('BackOfficeApp')
         }, function(error){});
     };
 
+    $scope.show_action_form = function(item, action){
+        if (action.form === true){
+            $scope.fetch_form(item, action);
+        } else {
+            $scope.form = action;
+            $scope.form.item = item;
+            $scope.action_form_popup.modal('show');
+        }
+    };
+
     $scope.execute_action = function(item, action, force){
         if (action.form){
-            if (action.form === true){
-                $scope.fetch_form(item, action);
-            } else {
-                $scope.form = action;
-                $scope.form.item = item;
-                $scope.action_form_popup.modal('show');
-            }
+            $scope.show_action_form(item, action);
         } else {
             if ($scope.is_link_action(action))
                 return;
@@ -325,14 +330,25 @@ angular.module('BackOfficeApp')
         var data = $scope.action_form_form.serialize();
         var item = form.item;
 
-        $scope.view.action('action', {method: form.method, pk: item.item_id, data: data}, false).then(function(result){
+        $scope.view.action('action', {
+            method: form.method,
+            pk: item && item.item_id || null,
+            data: data
+        }, false).then(function(result){
             if (result.success){
                 if (result.link_action){
                     $scope.action_form_popup.modal('hide');
-                    window.location.href = $scope.get_action_view_url(
-                        result.item,
-                        result.link_action,
-                        result.link_action.data);
+                    if (result.item){
+                        window.location.href = $scope.get_action_view_url(
+                            result.item,
+                            result.link_action,
+                            result.link_action.data);
+                    }else{
+                        var action_params = $scope.multiple_action_params(result.link_action.method);
+                        action_params = angular.extend(action_params, result.link_action.data);
+                        $scope.multiple_action = '';
+                        window.location.href = $scope.view.action_link('multiple_action_view', action_params);
+                    }
                 }else{
                     $scope.update_item(item, result, form.next_on_success);
                     $scope.show_success(result.success);
