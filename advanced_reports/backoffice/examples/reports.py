@@ -61,15 +61,21 @@ class CSVForm(forms.Form):
     filename = forms.CharField(initial='numbers.csv', required=True)
 
 
+class SumForm(forms.Form):
+    factor = forms.IntegerField(initial=1, required=True)
+
+
 class NoModelReport(AdvancedReport):
     verbose_name = 'number'
     verbose_name_plural = 'numbers'
     fields = ('value', 'square',)
     items_per_page = 10
     multiple_actions = True
+    search_fields = ('value', 'square',)
 
     item_actions = (
-        action(method='calculate_sum', verbose_name='Calculate sum', individual_display=False),
+        action(method='calculate_sum', verbose_name='Calculate sum', individual_display=False,
+               form=SumForm, form_via_ajax=True),
         action(method='export_as_csv_view', verbose_name='Export selection as CSV',
                individual_display=True, form=CSVForm, form_via_ajax=True)
     )
@@ -83,9 +89,10 @@ class NoModelReport(AdvancedReport):
     def get_item_for_id(self, item_id):
         return NoModel(int(item_id))
 
-    def calculate_sum_multiple(self, items):
+    def calculate_sum_multiple(self, items, form):
+        factor = form.cleaned_data['factor']
         return {
-            'dialog_content': 'The sum is: %d' % sum((item.value for item in items)),
+            'dialog_content': 'The sum is: %d' % (sum((item.value for item in items)) * factor),
             'dialog_style': {'width': '300px'}
         }
 

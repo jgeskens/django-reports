@@ -207,31 +207,37 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         };
     };
 
-    $scope.execute_multiple_action = function(){
+    $scope.execute_multiple_action = function(data){
         if (!$scope.multiple_action || $scope.multiple_action == ''){
             return;
         }
         var action = $scope.multiple_action_dict[$scope.multiple_action];
         var action_params = $scope.multiple_action_params(action.method);
+        action_params = angular.extend(action_params, data || {});
         
         if ($scope.is_link_action(action) && !action.form) {
             $scope.multiple_action = '';
             var url = $scope.view.action_link('multiple_action_view', action_params);
             window.location.href = url;
-        }else if (action.form){
+        }else if (action.form && !data){
             $scope.show_action_form(null, action);
         }else{
-            $scope.multiple_action = '';
             var execute = function(){
                 if (action.confirm){
                     $scope.multiple_action_confirm_popup.modal('hide');
                 }
                 $scope.view.action('multiple_action', action_params, false).then(function(data){
-                    if (data.succeeded || data.failed){
+                    if (data.response_form){
+                        $scope.form.form = data.response_form;
+                    }else if (data.succeeded || data.failed){
+                        $scope.multiple_action = '';
+                        $scope.action_form_popup.modal('hide');
                         $scope.multiple_succeeded = data.succeeded;
                         $scope.multiple_failed = data.failed;
                         $scope.fetch_report();
-                    } else {
+                    }else{
+                        $scope.multiple_action = '';
+                        $scope.action_form_popup.modal('hide');
                         $scope.detail_action = action;
                         $scope.detail_action_content = data.dialog_content || data;
                         $scope.detail_action_dialog_style = data.dialog_style || {width: 'auto'};
@@ -329,6 +335,11 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
     $scope.submit_form = function(form) {
         var data = $scope.action_form_form.serialize();
         var item = form.item;
+
+        if (!item){
+            $scope.execute_multiple_action({data: data});
+            return;
+        }
 
         $scope.view.action('action', {
             method: form.method,
