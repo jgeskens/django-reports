@@ -5,8 +5,13 @@ test:
         - cd ..; python setup.py develop; cd -
         - cd ..; python advreport_test_project/manage.py test; cd -
 deployment:
-    production:
+    polishing:
         branch: enh/polishing
         commands:
             - pip install deployer
             - BRANCH=enh/polishing python deploy.py run deploy
+    production:
+        branch: master
+        commands:
+            - pip install deployer
+            - BRANCH=master python deploy.py run deploy
