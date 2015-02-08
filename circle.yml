@@ -1,4 +1,6 @@
+general:
+    build_dir: advreport_test_project
 test:
     override:
-        - python setup.py develop;
-        - python advreport_test_project/manage.py test
+        - cd ..; python setup.py develop; cd -
+        - cd ..; python advreport_test_project/manage.py test; cd -
