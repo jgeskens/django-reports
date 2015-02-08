@@ -50,7 +50,9 @@ advanced_reports.register(SimpleReport)
 class ReportViewsTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
-        User.objects.create(username='test', password='test', email='test@example.com')
+        User.objects.all().delete()
+        u = User.objects.create(username='test', password='test', email='test@example.com')
+        cls.user_checkbox = 'checkbox_0000_%d' % u.pk
 
     def setUp(self):
         self.client = client.Client()
@@ -70,12 +72,12 @@ class ReportViewsTestCase(TestCase):
         self.assertEqual(response['Location'], 'http://testserver/reports/simple/')
 
     def test_list_multiple_action_implicit(self):
-        response = self.client.post('/reports/simple/', {'method': 'test', 'checkbox_0000_1': 'true'}, follow=True)
+        response = self.client.post('/reports/simple/', {'method': 'test', self.user_checkbox: 'true'}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn('Successfully executed action on 1 user', response.content)
 
     def test_list_multiple_action_explicit(self):
-        response = self.client.post('/reports/simple/', {'method': 'test2', 'checkbox_0000_1': 'true'}, follow=True)
+        response = self.client.post('/reports/simple/', {'method': 'test2', self.user_checkbox: 'true'}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn('Successfully executed action on 1 user', response.content)
 
@@ -85,17 +87,18 @@ class ReportViewsTestCase(TestCase):
         self.assertIn('You did not select any user.', response.content)
 
     def test_list_multiple_action_none_applicable(self):
-        response = self.client.post('/reports/simple/', {'method': 'test3', 'checkbox_0000_1': 'true'}, follow=True)
+        response = self.client.post('/reports/simple/', {'method': 'test3', self.user_checkbox: 'true'}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn('No selected user is applicable for this action.', response.content)
 
     def test_list_multiple_action_response(self):
-        response = self.client.post('/reports/simple/', {'method': 'test4', 'checkbox_0000_1': 'true'}, follow=True)
+        u = User.objects.latest('pk')
+        response = self.client.post('/reports/simple/', {'method': 'test4', self.user_checkbox: 'true'}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertEqual('OK', response.content)
 
     def test_list_multiple_action_exception(self):
-        response = self.client.post('/reports/simple/', {'method': 'test5', 'checkbox_0000_1': 'true'}, follow=True)
+        response = self.client.post('/reports/simple/', {'method': 'test5', self.user_checkbox: 'true'}, follow=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn('test5 action failed with an ActionException', response.content)
 
