@@ -4,3 +4,9 @@ test:
     override:
         - cd ..; python setup.py develop; cd -
         - cd ..; python advreport_test_project/manage.py test; cd -
+deployment:
+    production:
+        branch: enh/polishing
+        commands:
+            - pip install deployer
+            - BRANCH=enh/polishing python deploy.py run deploy
