@@ -1,6 +1,5 @@
 from advanced_reports.backoffice.base import BackOfficeView
 
-
 class SimpleView(BackOfficeView):
     def get_ip(self, request):
         return request.META['REMOTE_ADDR']

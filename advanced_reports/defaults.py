@@ -3,6 +3,7 @@ import time
 from collections import OrderedDict
 
 from django import forms
+from django.contrib import admin
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -14,10 +15,13 @@ from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
+from advanced_reports.backoffice.base import AutoSlug
+
 
 class ActionType(object):
     LINKS = 'links'
     BUTTONS = 'buttons'
+    INLINE_BUTTONS = 'inline_buttons'
 
 
 class action(object):
@@ -71,8 +75,8 @@ class action(object):
 
     prefetch_ajax_form = False
     '''
-    Optional. If False, the form will not be loaded together with the item, but later. Only applies when
-    form_via_ajax is True.
+    Optional. If True, the form will be loaded together with the item. Actions where
+    form_via_ajax is True will be prefetched anyway.
     '''
 
     link_via_ajax = False
@@ -215,7 +219,7 @@ class ActionException:
 
 
 class AdvancedReport(object):
-    slug = None
+    slug = AutoSlug(remove_suffix='Report')
     '''
     Required. A unique url-friendly name for your Advanced Report
     '''
@@ -408,6 +412,32 @@ class AdvancedReport(object):
     Determines if the advanced report should display a only single items. Used when you want to display
     to report in an other template
     '''
+
+    def __init__(self, *args, **kwargs):
+        self.model_admin = None
+
+        # Add defaults from the model meta
+        if self.models:
+            model = self.models[0]
+            if not self.verbose_name:
+                self.verbose_name = model._meta.verbose_name
+            if not self.verbose_name_plural:
+                self.verbose_name_plural = model._meta.verbose_name_plural
+            if not self.title:
+                self.title = capfirst(self.verbose_name_plural)
+
+            # Add defaults from the model admin
+            model_admin = admin.site._registry.get(model)
+            if model_admin:
+                self.model_admin = model_admin
+                if self.fields is None and model_admin.list_display:
+                    self.fields = model_admin.list_display
+                if not self.search_fields and model_admin.search_fields:
+                    self.search_fields = model_admin.search_fields
+                if not self.sortable_fields and model_admin.list_display:
+                    self.sortable_fields = model_admin.list_display
+
+
 
     def queryset(self):
         '''
@@ -731,8 +761,10 @@ class AdvancedReport(object):
         to_date = params.get('to', '')
         from_date_struct = time.strptime(params['from'], '%Y-%m-%d') if from_date else None
         to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
+        filters_from_request = self.get_filters_from_request(request)
 
-        queryset = queryset.filter(**self.get_filters_from_request(request))
+        if filters_from_request:
+            queryset = queryset.filter(**filters_from_request)
 
         if from_date_struct and to_date_struct:
             date_range_query = Q()
@@ -839,8 +871,11 @@ class AdvancedReport(object):
             return self.queryset()
 
     def get_sorted_queryset(self, by_field, request=None):
-        field_name = by_field.split('__')[0].split(',')[0]
-        field_name = field_name[1:] if field_name[0] == '-' else field_name
+        if by_field != '__str__':
+            field_name = by_field.split('__')[0].split(',')[0]
+            field_name = field_name[1:] if field_name[0] == '-' else field_name
+        else:
+            field_name = 'pk'
         if self.get_model_field(field_name) is None:
             return self._queryset(request)
         return self._queryset(request).order_by(*by_field.split(','))
@@ -980,10 +1015,15 @@ class AdvancedReport(object):
                 html = getattr(item, field_name, None)
         return html
 
+    def get_html_for_value(self, value):
+        return value
+
     def get_item_html(self, field_name, item):
-        html = getattr(self, 'get_%s_html' % field_name, lambda i: None)(item)
-        if html is None:
-            html = self.lookup_item_value(field_name, item)
+        value = getattr(self, 'get_%s_html' % field_name, lambda i: None)(item)
+        if value is None:
+            value = self.lookup_item_value(field_name, item)
+
+        html = self.get_html_for_value(value)
 
         decorator = getattr(self, 'get_%s_decorator' % field_name, lambda i: None)(item)
         if decorator is not None:
@@ -1169,15 +1209,6 @@ class EnrichedQueryset(object):
             self._enrich(i)
             yield i
 
-    def iterator(self):
-        if isinstance(self.queryset, QuerySet):
-            it = self.queryset.iterator()
-        else:
-            it = self.queryset
-        for i in it:
-            self._enrich(i)
-            yield i
-
     def _enrich_list(self, l):
         # We run enrich_list on all items in one pass.
         self.advreport.enrich_list(l)
@@ -1200,3 +1231,7 @@ class Resolver(object):
         from django.template import Variable
         return Variable(k).resolve(self.context)
 
+
+class BootstrapReport(AdvancedReport):
+    template = 'advanced_reports/bootstrap/report.html'
+    item_template = 'advanced_reports/bootstrap/item.html'

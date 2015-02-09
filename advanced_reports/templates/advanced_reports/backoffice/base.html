@@ -30,7 +30,7 @@
         {% block extra-head %}{% endblock %}
     </head>
 
-    <body ng-click="search_reset_results_preview()" ng-app="BackOfficeApp" ng-controller="MainController" ng-init="setup('{% url 'backoffice:api_home' %}', '{% url 'backoffice:home' %}')">
+    <body ng-click="search_reset_results_preview()" ng-app="BackOfficeApp" ng-controller="MainController" ng-init="setup('{% url 'backoffice:api_home' %}', '{% url 'backoffice:home' %}')" ng-cloak class="ng-cloak">
         {% include "advanced_reports/backoffice/home.html" %}
         {% include "advanced_reports/backoffice/model.html" %}
         {% include "advanced_reports/backoffice/tab.html" %}
@@ -61,7 +61,7 @@
                         <form class="navbar-form navbar-left" ng-submit="goto_search()">
                             <div class="form-group dropdown">
                                 <input type="text"
-                                       placeholder="Search"
+                                       placeholder="{% trans "Search" %}"
                                        class="form-control"
                                        ng-model="search_query"
                                        ng-change="search_show_results_preview()"
@@ -102,17 +102,17 @@
                             {% endblock %}
                         </ul>
 
-                        <p class="navbar-text navbar-left">
+                        <div class="navbar-text navbar-left">
                             <img ng-show="isLoading()" src="{{ STATIC_URL }}advanced_reports/img/modybox/loading.gif">
-                        </p>
+                        </div>
 
 
                         <form class="navbar-form navbar-right">
                             <a href="{% url 'backoffice:logout' %}" class="btn btn-danger">{% trans "Sign out" %}</a>
                         </form>
-                        <p class="navbar-text navbar-right">
+                        <div class="navbar-text navbar-right">
                             {% blocktrans with request.user.first_name as first_name %}Hi, <strong>{{ first_name }}</strong>{% endblocktrans %}
-                        </p>
+                        </div>
                     </div><!--/.navbar-collapse -->
                     {% endif %}
                 </div><!-- /.container -->

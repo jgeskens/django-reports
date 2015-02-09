@@ -41,7 +41,7 @@ class AdvancedReportView(BackOfficeView):
         method = request.action_params.get('method')
         pk = request.action_params.get('pk')
         slug = request.view_params.get('slug')
-        return api_form(request, slug, method, int(pk))
+        return api_form(request, slug, method, pk and int(pk) or None)
 
     def action(self, request):
         method = request.action_params.get('method')
@@ -52,17 +52,13 @@ class AdvancedReportView(BackOfficeView):
             # We have to do str(data) because otherwise QueryDict is too lazy to decode...
             post = QueryDict(str(data), encoding='utf-8')
             request.POST = post
-        return api_action(request, slug, method, int(pk))
+        return api_action(request, slug, method, pk and int(pk) or None)
 
     def action_view(self, request):
         report_slug = request.view_params.get('slug')
         method = request.view_params.get('report_method')
         pk = request.view_params.get('pk')
-
-        advreport = get_report_for_slug(report_slug)
-        item = advreport.get_item_for_id(pk)
-        advreport.enrich_object(item, request=request)
-        return getattr(advreport, method)(item)
+        return api_action(request, report_slug, method, int(pk))
 
     def multiple_action(self, request):
         report_slug = request.view_params.get('slug')
@@ -70,13 +66,37 @@ class AdvancedReportView(BackOfficeView):
         items = request.action_params.get('items').split(',')
         global_select = request.action_params.get('global')
         advreport = get_report_for_slug(report_slug)
+        data = request.action_params.get('data')
+        if data:
+            # We have to do str(data) because otherwise QueryDict is too lazy to decode...
+            post = QueryDict(str(data), encoding='utf-8')
+            request.POST = post
 
         if global_select:
             items, context = advreport.get_object_list(request)
         else:
             items = [advreport.get_item_for_id(pk) for pk in items]
         if hasattr(advreport, '%s_multiple' % method):
-            return getattr(advreport, '%s_multiple' % method)(items)
+            try:
+                action = advreport.find_action(method)
+                if action.form:
+                    form = action.form(request.POST, prefix='actionform')
+                    if form.is_valid():
+                        response = getattr(advreport, '%s_multiple' % method)(items, form)
+                    else:
+                        if action.form_template:
+                            response_form = render_to_string(action.form_template, {'form': form})
+                        else:
+                            response_form = unicode(form)
+                        return {'response_form': response_form}
+                else:
+                    response = getattr(advreport, '%s_multiple' % method)(items)
+                if response:
+                    return response
+                messages.success(request, _(u'Successfully executed action on all selected items.'))
+            except ActionException, e:
+                messages.error(request, e.msg)
+            return {'succeeded': {}}
         else:
             succeeded, failed = {}, {}
             for item in items:
@@ -116,7 +136,13 @@ class AdvancedReportView(BackOfficeView):
 
         items = [item for item in items if advreport.find_object_action(item, method)]
         if items:
-            return getattr(advreport, '%s_multiple' % method)(items)
+            action = advreport.find_action(method)
+            if action.form:
+                form = action.form(request.GET, prefix='actionform')
+                if form.is_valid():
+                    return getattr(advreport, '%s_multiple' % method)(items, form)
+            else:
+                return getattr(advreport, '%s_multiple' % method)(items)
         messages.error(request, _(u'No items were applicable for this action.'))
         return redirect(request.META['HTTP_REFERER'])
 

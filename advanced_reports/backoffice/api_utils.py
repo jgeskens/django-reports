@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.http import HttpResponse
 from django.utils.translation import ugettext_lazy as make_proxy
 from django.conf import settings
@@ -9,8 +10,12 @@ _proxy_type = type(make_proxy('ignore this'))
 def _json_object_encoder(obj):
     if isinstance(obj, _proxy_type):
         return u'%s' % obj
+    elif isinstance(obj, Decimal):
+        return unicode(obj)
     elif hasattr(obj, 'isoformat'):
         return obj.isoformat()
+    elif hasattr(obj, 'splitlines'):
+        return unicode(obj)
     else:
         return None
 

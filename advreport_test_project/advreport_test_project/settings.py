@@ -124,9 +124,14 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     # Uncomment the next line to enable admin documentation:
     # 'django.contrib.admindocs',
+    'advreport_examples',
+    'oemfoe_todos_app',
     'advanced_reports',
     'advanced_reports.backoffice',
     'widget_tweaks',
+    'django_ajax',
+    'django_template_tags',
+    'djprogress',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
@@ -172,3 +177,13 @@ TEMPLATE_CONTEXT_PROCESSORS = DEFAULT_SETTINGS.TEMPLATE_CONTEXT_PROCESSORS + (
 
 # The name of the class to use to run the test suite
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+
+
+########################
+# Production overrides #
+########################
+
+try:
+    from .local import *
+except ImportError:
+    pass

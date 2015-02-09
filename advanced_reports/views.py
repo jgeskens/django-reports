@@ -9,7 +9,6 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_entities, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
-from django.db import transaction
 
 from django_ajax.pagination import paginate
 
@@ -79,9 +78,9 @@ def list(request, slug, ids=None, internal_mode=False, report_header_visible=Tru
         # CSV?
         if 'csv' in request.GET:
             try:
-                from djprogress import with_progress
-            except ImportError:
-                with_progress = lambda it, **kw: it
+                from djprogress import with_progress # pragma: no cover
+            except ImportError: # pragma: no cover
+                with_progress = lambda it, **kw: it # pragma: no cover
             # Avoid microsoft SYLK problem http://support.microsoft.com/kb/215591
             _mark_safe = lambda s: s if unicode(s) != u'ID' else u'"%s"' % s
             object_count = len(object_list)
@@ -300,14 +299,18 @@ def api_form(request, slug, method, object_id):
     advreport.set_request(request)
 
     def inner(request, slug, method, object_id):
-        object = advreport.get_item_for_id(object_id)
-        advreport.enrich_object(object, request=request)
-        a = advreport.find_object_action(object, method)
+        object = object_id and advreport.get_item_for_id(object_id)
+        if object:
+            advreport.enrich_object(object, request=request)
+            a = advreport.find_object_action(object, method)
+        else:
+            a = advreport.find_action(method)
         if a is None or not a.form:
             # No appropriate action found (maybe it was filtered out?)
             raise Http404
-        instance = a.get_form_instance(advreport.get_item_for_id(object_id))
-        a = a.copy_with_instanced_form(advreport, prefix=object_id, instance=instance)
+        instance = object_id and a.get_form_instance(advreport.get_item_for_id(object_id))
+        prefix = object_id or 'actionform'
+        a = a.copy_with_instanced_form(advreport, prefix=prefix, instance=instance)
 
         form_instance = a.form
         rendered_form = a.form_template \
@@ -346,14 +349,16 @@ def _action_dict(request, o, action):
 def _item_values(request, o, advreport):
     return {
         'values': o.advreport_column_values,
-        'extra_information': o.advreport_extra_information.replace('data-method="', 'ng-bind-html-unsafe="lazydiv__%s__' % advreport.get_item_id(o)),
+        'extra_information': o.advreport_extra_information.replace('data-method="',
+                                                                   'ng-bind-html-unsafe="lazydiv__%s__' % advreport.get_item_id(o)),
         'actions': [_action_dict(request, o, a) for a in o.advreport_actions],
         'item_id': advreport.get_item_id(o)
     }
 
 
-def _is_allowed_multiple_action(request, action):
-    return not action.hidden and not action.form and action.multiple_display and action.is_allowed(request)
+def _is_allowed_multiple_action(request, advreport, action):
+    form_allowed = not action.form or hasattr(advreport, '%s_multiple' % action.method)
+    return not action.hidden and form_allowed and action.multiple_display and action.is_allowed(request)
 
 def api_list(request, slug, ids=None):
     advreport = get_report_or_404(slug)
@@ -375,10 +380,15 @@ def api_list(request, slug, ids=None):
             'search_fields': advreport.search_fields,
             'filter_fields': advreport.filter_fields,
             'filter_values': advreport.filter_values,
+            'action_list_type': advreport.action_list_type,
             'field_metadata': advreport.get_field_metadata_dict(),
             'report_header_visible': advreport.report_header_visible,
             'multiple_actions': advreport.multiple_actions,
-            'multiple_action_list': [a.attrs_dict for a in advreport.item_actions if _is_allowed_multiple_action(request, a)]
+            'multiple_action_list': [
+                _action_dict(request, None, a) \
+                for a in advreport.item_actions \
+                if _is_allowed_multiple_action(request, advreport, a)
+            ],
         }
         return JSONResponse(report)
 
@@ -392,9 +402,12 @@ def api_action(request, slug, method, object_id):
     advreport.set_request(request)
 
     def inner(request, slug, method, object_id):
-        obj = advreport.get_item_for_id(object_id)
-        advreport.enrich_object(obj, request=request)
-        a = advreport.find_object_action(obj, method)
+        obj = object_id and advreport.get_item_for_id(object_id)
+        if obj:
+            advreport.enrich_object(obj, request=request)
+            a = advreport.find_object_action(obj, method)
+        else:
+            a = advreport.find_action(method)
         if a is None:
             return HttpResponse(_(u'Unsupported action method "%s".' % method), status=404)
         if not a.is_allowed(request):
@@ -402,14 +415,24 @@ def api_action(request, slug, method, object_id):
         context = {}
         try:
             if request.method == 'POST' and a.form is not None:
+                prefix = object_id or 'actionform'
                 if issubclass(a.form, forms.ModelForm):
-                    form = a.form(request.POST, request.FILES, instance=a.get_form_instance(obj), prefix=object_id)
+                    form = a.form(request.POST, request.FILES, instance=a.get_form_instance(obj), prefix=prefix)
                 else:
-                    form = a.form(request.POST, request.FILES, prefix=object_id)
+                    form = a.form(request.POST, request.FILES, prefix=prefix)
 
                 if form.is_valid():
-                    advreport.get_action_callable(a.method)(obj, form)
-                    obj = advreport.get_item_for_id(object_id)
+                    if method.endswith('_view'):
+                        context['link_action'] = {
+                            'method': method,
+                            'data': request.POST
+                        }
+                    else:
+                        response = advreport.get_action_callable(a.method)(obj, form)
+                        if response:
+                            return response
+
+                    obj = object_id and advreport.get_item_for_id(object_id)
                     context.update({'success': a.get_success_message()})
                 else:
                     context.update({'response_method': method, 'response_form': unicode(form)})
@@ -418,8 +441,9 @@ def api_action(request, slug, method, object_id):
                 if obj:
                     advreport.enrich_object(obj, request=request)
                     context.update({'item': _item_values(request, obj, advreport)})
-                else:
+                elif object_id:
                     context.update({'item': None, 'removed_item_id': object_id})
+
                 return JSONResponse(context)
 
             elif a.form is None:
@@ -434,10 +458,20 @@ def api_action(request, slug, method, object_id):
                     context = {'item': None, 'success': a.get_success_message(), 'removed_item_id': object_id}
                 return JSONResponse(context)
 
+            elif a.form is not None:
+                if issubclass(a.form, forms.ModelForm):
+                    form = a.form(request.GET, instance=a.get_form_instance(obj), prefix=object_id)
+                else:
+                    form = a.form(request.GET, prefix=object_id)
+                if form.is_valid():
+                    response = advreport.get_action_callable(a.method)(obj, form)
+                    if response:
+                        return response
+
         except ActionException, e:
             return HttpResponse(e.msg, status=404)
 
-        # a.form is not None but not a POST request
+        # All other cases are not supported.
         return HttpResponse(_(u'Unsupported request method.'), status=404)
 
     if advreport.decorate_views:
