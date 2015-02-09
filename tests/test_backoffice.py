@@ -1,9 +1,11 @@
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
+from django.http.response import Http404, HttpResponse
+from django.template.response import TemplateResponse
 from django.test import TestCase, Client
 from django.test.client import RequestFactory
 import six
-from advanced_reports.backoffice.api_utils import ViewRequestParameters
+from advanced_reports.backoffice.api_utils import ViewRequestParameters, to_json
 from advanced_reports.backoffice.base import BackOfficeBase, BackOfficeView
 
 from advanced_reports.backoffice.examples.backoffice import test_backoffice
@@ -73,8 +75,12 @@ class BackOfficeBackend(TestCase):
 
 
 class RequestWithViewParams(object):
-    def __init__(self, params, user):
-        self.view_params = ViewRequestParameters(RequestFactory().get('/', params))
+    def __init__(self, params, user, post=False):
+        if post:
+            self.view_params = ViewRequestParameters(RequestFactory().post('/', params,
+                                                                           content_type='application/json'))
+        else:
+            self.view_params = ViewRequestParameters(RequestFactory().get('/', params))
         self.user = user
 
 
@@ -88,9 +94,19 @@ class PermissionView(SimpleView):
 
 class PostView(SimpleView):
     template = SimpleView.template
+    permission = 'some_permission'
+
+    def get(self, request):
+        return TemplateResponse(request, self.template, self.get_context(request)), {'extra': True}
 
     def post(self, request):
         return self.get(request)
+
+    def do_something(self, request):
+        return 'something'
+
+    def myview(self, request):
+        return HttpResponse('Hello!')
 
 
 class BackOfficeViewTestCase(TestCase):
@@ -111,6 +127,9 @@ class BackOfficeViewTestCase(TestCase):
         self.assertEqual(r['slug'], 'simple')
         self.assertGreater(len(r['content']), 0)
 
+        r = test_backoffice.api_get_view(RequestWithViewParams({'view_slug': 'post'}, self.user))
+        self.assertEqual(r['extra'], True)
+
     def test_non_existing_view_slug(self):
         r = test_backoffice.api_get_view(RequestWithViewParams({'view_slug': 'nonexisting'}, self.user))
         self.assertIn('View with slug "nonexisting" does not exist.', r['content'])
@@ -128,3 +147,60 @@ class BackOfficeViewTestCase(TestCase):
     def test_post_permission(self):
         r = test_backoffice.api_post_view(RequestWithViewParams({'view_slug': 'permission'}, self.user2))
         self.assertEqual(r.content, 'You are not allowed to post data to the view "permission".')
+
+    def test_post_view_action(self):
+        request_body = to_json({
+            'method': 'do_something',
+            'view_params': {'view_slug': 'post'},
+            'params': {}
+        })
+        r = test_backoffice.api_post_view_action(RequestWithViewParams(request_body, self.user, post=True))
+        self.assertEqual(r, 'something')
+
+    def test_post_view_action_not_allowed(self):
+        request_body = to_json({
+            'method': 'do_something',
+            'view_params': {'view_slug': 'post'},
+            'params': {}
+        })
+        r = test_backoffice.api_post_view_action(RequestWithViewParams(request_body, self.user2, post=True))
+        self.assertEqual(r.content, 'You are not allowed to post data to the view "post".')
+
+    def test_post_view_action_non_existing_method(self):
+        request_body = to_json({
+            'method': 'non_existing_method',
+            'view_params': {'view_slug': 'post'},
+            'params': {}
+        })
+        with self.assertRaises(Http404):
+             test_backoffice.api_post_view_action(RequestWithViewParams(request_body, self.user, post=True))
+
+    def test_get_view_view(self):
+        params = {'view_slug': 'post', 'method': 'myview'}
+        r = test_backoffice.api_get_view_view(RequestWithViewParams(params, self.user))
+        self.assertContains(r, 'Hello!')
+
+    def test_get_view_view_not_allowed(self):
+        params = {'view_slug': 'post', 'method': 'myview'}
+        r = test_backoffice.api_get_view_view(RequestWithViewParams(params, self.user2))
+        self.assertContains(r, 'You are not allowed to view data from the view "post".', status_code=403)
+
+    def test_get_view_view_non_existing_method(self):
+        params = {'view_slug': 'post', 'method': 'non_existing_method'}
+        with self.assertRaises(Http404):
+            test_backoffice.api_get_view_view(RequestWithViewParams(params, self.user))
+
+    def test_post_view_view(self):
+        params = {'view_slug': 'post', 'method': 'myview'}
+        r = test_backoffice.api_post_view_view(RequestWithViewParams(params, self.user))
+        self.assertContains(r, 'Hello!')
+
+    def test_FOO(self):
+        request_body = to_json({
+            'method': 'FOO',
+            'view_params': {'view_slug': 'post'},
+            'params': {}
+        })
+        with self.assertRaises(NotImplementedError):
+            test_backoffice.api_post_view_action(RequestWithViewParams(request_body, self.user, post=True))
+

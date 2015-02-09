@@ -671,12 +671,29 @@ class SearchMixin(object):
 
 
 class BackOfficeView(object):
+    """
+    A ``BackOfficeView`` is a combination of Python/Django code with the ``view`` AngularJS Directive.
+    When registered to a ``BackOfficeBase`` subclass instance, this will be shown by the ``view`` directive
+    when called with the correct ``slug``.
+    """
+
+    #: The slug of the view. If not explicitly filled in, the "View" suffix will be stripped off the
+    #: subclass name and the remaining prefix will be converted to lowercase. For example, a
+    #: ``UserView`` subclass will get automatically the slug ``'user'``.
     slug = AutoSlug(remove_suffix='View')
+
+    #: The template for the view. If not explicitly filled in, it will default to, for example when the
+    #: subclass has the name ``UserView``, ``'advanced_reports/backoffice/views/user.html'``.
     template = AutoTemplate('views', remove_suffix='View')
 
+    #: When filled in, this permission will be checked against the currently logged in user. If
+    #: the user does not have this permission, nothing of this view will be exposed to this user.
     permission = None
 
     def serialize(self, content, extra_context=None):
+        """
+        Serializes the given content to a format that is easy to encode to JSON.
+        """
         if isinstance(content, str):
             content = content.decode('utf-8')
 
