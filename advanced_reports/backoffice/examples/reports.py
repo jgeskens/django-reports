@@ -111,3 +111,15 @@ class NoModelReport(AdvancedReport):
         response['Content-Disposition'] = 'attachment; filename="%s"' % filename
         return response
 
+
+class NewStyleReport(AdvancedReport):
+    model = User
+    fields = 'first_name', 'last_name', 'email'
+
+    @action('Say hello', css_class='btn-primary')
+    def hello(self, item):
+        return 'Hello, %s!' % self.request.user.first_name
+
+    @action('Edit user', form=UserForm)
+    def edit(self, item, form):
+        form.save()

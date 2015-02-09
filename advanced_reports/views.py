@@ -11,6 +11,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
 
 from django_ajax.pagination import paginate
+import six
 
 from advanced_reports import get_report_or_404
 from advanced_reports.backoffice.api_utils import JSONResponse
@@ -397,6 +398,17 @@ def api_list(request, slug, ids=None):
     return inner(request, slug, ids)
 
 
+def _prepare_string_response(response, a):
+    # Back to default normal-width dialog boxes.
+    if isinstance(response, six.string_types):
+        if a.is_new_style:
+            return {
+                'dialog_content': response,
+                'dialog_style': {'width': '600px'}
+            }
+    return response
+
+
 def api_action(request, slug, method, object_id):
     advreport = get_report_or_404(slug)
     advreport.set_request(request)
@@ -430,7 +442,7 @@ def api_action(request, slug, method, object_id):
                     else:
                         response = advreport.get_action_callable(a.method)(obj, form)
                         if response:
-                            return response
+                            return _prepare_string_response(response, a)
 
                     obj = object_id and advreport.get_item_for_id(object_id)
                     context.update({'success': a.get_success_message()})
@@ -449,7 +461,7 @@ def api_action(request, slug, method, object_id):
             elif a.form is None:
                 response = advreport.get_action_callable(a.method)(obj)
                 if response:
-                    return response
+                    return _prepare_string_response(response, a)
                 obj = advreport.get_item_for_id(object_id)
                 if obj:
                     advreport.enrich_object(obj, request=request)
@@ -466,7 +478,7 @@ def api_action(request, slug, method, object_id):
                 if form.is_valid():
                     response = advreport.get_action_callable(a.method)(obj, form)
                     if response:
-                        return response
+                        return _prepare_string_response(response, a)
 
         except ActionException, e:
             return HttpResponse(e.msg, status=404)

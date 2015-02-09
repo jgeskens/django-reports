@@ -15,6 +15,8 @@ from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
+from six import wraps
+import six
 from advanced_reports.backoffice.base import AutoSlug
 
 
@@ -26,6 +28,7 @@ class ActionType(object):
 
 class action(object):
     attrs_dict = None
+    creation_counter = 0
 
     method = None
     '''
@@ -151,11 +154,21 @@ class action(object):
     Optional. The permission required for this action.
     '''
 
+    #: Whether the action is defined by the new style method (as a decorator) or not.
+    #: The advantage is that new cool stuff that should not be backwards compatible can be enabled when this
+    #: attributes is True.
+    is_new_style = False
 
-    def __init__(self, **kwargs):
-        '''
+    def __init__(self, title=None, **kwargs):
+        """
         Each kwarg maps to a property above. For documentation, refer to the individual property documentation strings.
-        '''
+        """
+        action.creation_counter += 1
+        self.creation_counter = action.creation_counter
+
+        if title:
+            kwargs['verbose_name'] = title
+
         self.attrs_dict = {}
         for k in kwargs.keys():
             setattr(self, k, kwargs[k])
@@ -205,6 +218,36 @@ class action(object):
     def is_allowed(self, request):
         return not self.permission or request.user.has_perm(self.permission)
 
+    def __call__(self, function):
+        """
+        Allows to use an action as a decorator. Example::
+
+            class MyReport(AdvancedReport):
+                model = User
+
+                @action('Edit user', form=UserForm)
+                def edit(self, user, form):
+                    form.save()
+        """
+
+        # Now that we are using a new style of calling this action, we can safely use
+        # a new set of defaults :-)
+        if self.form:
+            if not 'form_via_ajax' in self.attrs_dict:
+                self.form_via_ajax = True
+                self.attrs_dict['form_via_ajax'] = True
+        self.is_new_style = True
+        self.attrs_dict['is_new_style'] = True
+
+        self.method = function.__name__
+        self.attrs_dict['method'] = self.method
+
+        @wraps(function)
+        def decorator(*args, **kwargs):
+            return function(*args, **kwargs)
+        decorator.action = self
+        return decorator
+
 
 class ActionException:
     def __init__(self, msg=None, form=None):
@@ -213,16 +256,14 @@ class ActionException:
             for k in form.errors.keys():
                 for e in form.errors[k]:
                     msg += u' ' + e
-            self.msg = e
+            self.msg = msg
         else:
             self.msg = u'%s' % msg
 
 
 class AdvancedReport(object):
+    #: Required. A unique url-friendly name for your Advanced Report
     slug = AutoSlug(remove_suffix='Report')
-    '''
-    Required. A unique url-friendly name for your Advanced Report
-    '''
 
     request = None
     '''
@@ -298,11 +339,14 @@ class AdvancedReport(object):
     Optional. Some text to explain the purpose of the report and some extra info.
     '''
 
+    #: Optional, but strongly advised to use it. A model class. An ``AdvancedReport`` can infer a lot of stuff
+    #: from your model, including but not limited to the field verbose names, sortable fields, ...
+    #: This is a shortcut to the ``models`` attribute.
+    model = None
+
+    #: Optional, but strongly advised to use it. A tuple of model classes. This is merely for
+    #: extra metadata and checking if some of your fields are real model fields.
     models = None
-    '''
-    Optional, but strongly advisable to use it. A tuple of model classes. This is merely for
-    extra metadata and checking if some of your fields are real model fields.
-    '''
 
     items_per_page = 20
     '''
@@ -416,6 +460,10 @@ class AdvancedReport(object):
     def __init__(self, *args, **kwargs):
         self.model_admin = None
 
+        # Expand some shortcuts
+        if not self.models and self.model:
+            self.models = (self.model,)
+
         # Add defaults from the model meta
         if self.models:
             model = self.models[0]
@@ -437,13 +485,21 @@ class AdvancedReport(object):
                 if not self.sortable_fields and model_admin.list_display:
                     self.sortable_fields = model_admin.list_display
 
-
+        # Expand item_actions with the decorated versions
+        item_actions = list(self.item_actions)
+        for method_name in dir(self):
+            method = getattr(self, method_name)
+            if callable(method) and hasattr(method, 'action'):
+                item_actions.append(method.action)
+        item_actions.sort(key=lambda a: a.creation_counter)
+        self.item_actions = item_actions
 
     def queryset(self):
-        '''
-        You must implement this function as this is the primary source of the data you will
-        want to manage.
-        '''
+        """
+        The primary source of the data you will want to manage.
+        """
+        if self.models:
+            return self.models[0].objects.all()
         return None
 
     def get_FOO_verbose_name(self):
