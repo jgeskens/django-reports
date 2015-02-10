@@ -218,7 +218,7 @@ class action(object):
     def is_allowed(self, request):
         return not self.permission or request.user.has_perm(self.permission)
 
-    def __call__(self, function):
+    def __call__(self, function=None):
         """
         Allows to use an action as a decorator. Example::
 
@@ -229,6 +229,10 @@ class action(object):
                 def edit(self, user, form):
                     form.save()
         """
+
+        # This dark magic is needed for Django's dirty template code.
+        if function is None:
+            return self
 
         # Now that we are using a new style of calling this action, we can safely use
         # a new set of defaults :-)
@@ -488,9 +492,10 @@ class AdvancedReport(object):
         # Expand item_actions with the decorated versions
         item_actions = list(self.item_actions)
         for method_name in dir(self):
-            method = getattr(self, method_name)
-            if callable(method) and hasattr(method, 'action'):
-                item_actions.append(method.action)
+            if not hasattr(AdvancedReport, method_name):
+                method = getattr(self, method_name)
+                if callable(method) and hasattr(method, 'action'):
+                    item_actions.append(method.action)
         item_actions.sort(key=lambda a: a.creation_counter)
         self.item_actions = item_actions
 

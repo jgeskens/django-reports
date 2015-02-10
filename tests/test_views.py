@@ -44,6 +44,7 @@ class SimpleReport(BootstrapReport):
         if group is None: return True
         return False
 
+
 advanced_reports.register(SimpleReport)
 
 
