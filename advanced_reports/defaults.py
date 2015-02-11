@@ -15,8 +15,12 @@ from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
-from six import wraps
-import six
+
+try:
+    from six import wraps
+except ImportError:
+    from functools import wraps
+
 from advanced_reports.backoffice.base import AutoSlug
 
 
