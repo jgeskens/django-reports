@@ -342,7 +342,7 @@ def _action_dict(request, o, action):
                 or unicode(form_instance)
     if action.confirm:
         context = {'item': o}
-        context.update(o.__dict__)
+        context.update(getattr(o, '__dict__', {}))
         d['confirm'] = action.confirm % Resolver(context)
     return d
 
