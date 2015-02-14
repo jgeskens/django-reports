@@ -346,30 +346,30 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
             pk: item && item.item_id || null,
             data: data
         }, false).then(function(result){
-            if (result.success){
-                if (result.link_action){
-                    $scope.action_form_popup.modal('hide');
-                    if (result.item){
-                        window.location.href = $scope.get_action_view_url(
-                            result.item,
-                            result.link_action,
-                            result.link_action.data);
-                    }else{
-                        var action_params = $scope.multiple_action_params(result.link_action.method);
-                        action_params = angular.extend(action_params, result.link_action.data);
-                        $scope.multiple_action = '';
-                        window.location.href = $scope.view.action_link('multiple_action_view', action_params);
-                    }
+            if (result.link_action){
+                $scope.action_form_popup.modal('hide');
+                if (result.item){
+                    window.location.href = $scope.get_action_view_url(
+                        result.item,
+                        result.link_action,
+                        result.link_action.data);
                 }else{
+                    var action_params = $scope.multiple_action_params(result.link_action.method);
+                    action_params = angular.extend(action_params, result.link_action.data);
+                    $scope.multiple_action = '';
+                    window.location.href = $scope.view.action_link('multiple_action_view', action_params);
+                }
+            }else{
+                if (result.success){
                     $scope.update_item(item, result, form.next_on_success);
                     $scope.show_success(result.success);
                     $scope.trigger_success_attr(form);
                     $scope.form = null;
                     $scope.action_form_popup.modal('hide');
+                }else{
+                    form.form = result.response_form;
+                    $scope.form = form;
                 }
-            }else{
-                form.form = result.response_form;
-                $scope.form = form;
             }
         }, function(error){
             $scope.action_form_popup.modal('hide');
