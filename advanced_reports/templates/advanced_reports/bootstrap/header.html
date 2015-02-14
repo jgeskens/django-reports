@@ -1,0 +1,170 @@
+{% load i18n %}
+
+{% if error %}
+<div class="error">{{ error }}</div>
+{% endif %}
+
+<form method="post" id="csrf_form">
+    {% csrf_token %}
+</form>
+
+{% if advreport.help_text or advreport.links|length > 0 %}
+<div class="panel-heading">
+    <div class="row">
+        <div class="{% if advreport.links|length > 0 %}col-md-6{% else %}col-md-12{% endif %} help-text">
+            <p>
+                {% if advreport.help_text %}
+                    {{ advreport.help_text|safe }}
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="{% if advreport.help_text %}col-md-6{% else %}col-md-12{% endif %} alignRight">
+            {% block header_buttons_right %}
+            <ul class="buttons">
+                {% for link in advreport.links %}
+                    <li class="right">
+                        {% ifequal link.1 "." %}
+                            <a class="button top-link btn btn-default" href="{{ request.path }}?{{ request.META.QUERY_STRING }}">{{ link.0 }}</a>
+                        {% else %}
+                            {% ifequal link.1 "?csv" %}
+                                <a class="button top-link btn btn-default" href="{{ request.path }}?csv&amp;{{ request.META.QUERY_STRING }}">{{ link.0 }}</a>
+                            {% else %}
+                                <a class="button top-link btn btn-default" href="{{ link.1 }}">{{ link.0 }}</a>
+                            {% endifequal %}
+                        {% endifequal %}
+                        {% if link|length_is:3 %}
+                        <br/><span class="smaller lighter">{{ link.2 }}</span>
+                        {% endif %}
+                    </li>
+                {% empty %}
+                <li></li>
+                {% endfor %}
+            </ul>
+            {% endblock %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if advreport.search_fields or advreport.filter_fields or advreport.tabbed_filter_fields %}
+
+    <form method="get" action="{{ request.path }}" class="panel-body">
+        {% for rv in request.GET.items %}
+            {% if not rv.0 in "q|exact|from|to" and not rv.0 in advreport.filter_fields %}
+                <input type="hidden" name="{{ rv.0 }}" value="{{ rv.1 }}" />
+            {% endif %}
+        {% endfor %}
+
+        {% if advreport.tabbed_filter_fields %}
+            {% for filter_field, field_items in tabbed_filters_links %}
+                {% for field, image in field_items %}
+                    {% if forloop.first %}<div class="tabbing-tabs"><ul>{% endif %}
+                        <li {% if request.GET.tab_type == filter_field|add:'_'|add:field %} class="selected"{% endif %}>
+                            <a href="{{ request.path }}?tab_type={{ filter_field }}_{{ field }}">{% if image %}<img src="{{ image }}"/> {% endif %}{{ field }}</a>
+                        </li>
+                    {% if forloop.last %}</ul></div>{% endif %}
+                {% endfor %}
+            {% endfor %}
+        {% endif %}
+
+        <div class="form-inline">
+            <div class="form-group">
+                <input class="form-control" type="text" id="search_field" name="q" value="{{ request.GET.q }}" title="{{ advreport.searchable_columns }}" />
+            </div>
+            <div class="checkbox">
+                <label><input type="checkbox" name="exact" {% if request.GET.exact %}checked="checked"{% endif %}/> {% trans "exact" %}</label>
+            </div>
+
+            {% if advreport.date_range %}
+            <div class="form-group"><label>{{ advreport.date_range_verbose_name }} {% trans "from" %}:</label></div>
+            <div class="form-group">
+                <input type="text" id="from_field" name="from" value="{{ request.GET.from }}" class="date_range form-control" />
+            </div>
+            <div class="form-group"><label>{% trans "until" %}:</label></div>
+            <div class="form-group">
+                <input type="text" id="to_field" name="to" value="{{ request.GET.to }}" class="date_range form-control" />
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <input class="form-control btn btn-default" type="submit" value="{% trans "Filter" %}" />
+            </div>
+            <div class="form-group">
+                <label>{% if request.GET.q or request.GET.to %}<a href=".">{% trans "show all" %}</a>{% endif %}</label>
+            </div>
+        </div>
+
+        {% if advreport.filter_fields %}
+        <div class="panel-body">
+            {% for field in filters_form %}
+            {{ field.label }}: {{ field }}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </form>
+
+{% endif %}
+<div class="container bar">
+    <div class="half left">
+        {% if advreport.multiple_actions %}
+        <form method="post" action="{{ request.get_full_path }}" class="header-form no_disable multiple-action-form">
+            {% csrf_token %}
+            <table>
+                <tr>
+                    <th>{% trans "With selected" %}:</th>
+                    <td>
+                        {% for object in paginated.object_list %}
+                        <input type="hidden" name="checkbox_{{ forloop.counter|stringformat:"09d" }}_{{ object.advreport_object_id }}" id="hidden_checkbox_{{ object.advreport_object_id }}" value="false" />
+                        {% endfor %}
+                        {% for action in advreport.item_actions %}
+                            {% if not action.form and action.confirm and not action.hidden and action.multiple_display %}
+                                <span style="display: none;" class="confirm_{{ action.method }}" data-confirm="{% blocktrans with action.verbose_name as action_name and advreport.verbose_name_plural as items %}{{ action_name }}: Are you sure you want to execute this on the selected {{ items }}?{% endblocktrans %}"></span>
+                            {% endif %}
+                        {% endfor %}
+                        <select id="select-method" name="method">
+                            <option value="" selected="selected">--</option>
+                            {% for action in advreport.item_actions %}
+                                {% if not action.form and not action.hidden and action.multiple_display %}
+                                    <option value="{{ action.method }}">{{ action.verbose_name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <input type="submit" value="{% trans "Go" %}"/>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        {% endif %}
+    </div>
+
+    {% comment %}
+    <div class="half right alignRight">
+        <table>
+            <tr>
+                <td>
+                {% if request.GET.q %}
+                    {{ object_list|length|pluralize:_('search result,search results') }}
+                {% else %}
+                    {% if object_list|length_is:1 %}
+                        {{ advreport.verbose_name }}
+                    {% else %}
+                        {{ advreport.verbose_name_plural }}
+                    {% endif %}
+                {% endif %}
+                </td>
+            </tr>
+            <tr class="cnt">
+                <td>{{ object_list|length }}</td>
+            </tr>
+            <tr class="lighter smaller">
+                <td>
+                    {% if advreport.sortable_fields %}
+                        {% trans "ordered by" %} <strong>{{ ordered_by|lower }}</strong>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+    {% endcomment %}
+</div>
