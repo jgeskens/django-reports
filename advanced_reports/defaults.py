@@ -22,6 +22,8 @@ try:
 except ImportError:
     from functools import wraps
 
+import six
+
 from advanced_reports.backoffice.base import AutoSlug
 
 
