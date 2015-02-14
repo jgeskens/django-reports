@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
+from django.http.response import Http404
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
 from django.utils.datastructures import SortedDict
@@ -153,10 +154,11 @@ class action(object):
     If the form of the action has a file upload, set it to true. enctype='multipart/form-data' will be added to the form.
     '''
 
+    #: Optional. The permission required for this action.
     permission = None
-    '''
-    Optional. The permission required for this action.
-    '''
+
+    #: Whether the action method acts like a regular Django view.
+    regular_view = False
 
     #: Whether the action is defined by the new style method (as a decorator) or not.
     #: The advantage is that new cool stuff that should not be backwards compatible can be enabled when this
@@ -210,6 +212,11 @@ class action(object):
         return self.success or _(u'Successfully executed "%s"') % self.verbose_name
 
     def get_form_instance(self, instance, *args, **kwargs):
+        if not instance:
+            return None
+        if self.form and not issubclass(self.form, forms.ModelForm):
+            return None
+
         if 'param' in kwargs and not kwargs['param']:
             kwargs.pop('param')
         
@@ -219,12 +226,32 @@ class action(object):
                 else self.form_instance
         return instance
 
+    def get_bound_form(self, request, instance, prefix):
+        if self.form is None:
+            return None
+        kwargs = {}
+        instance = self.get_form_instance(instance)
+        if instance:
+            kwargs['instance'] = instance
+        if request.method == 'GET':
+            return self.form(request.GET, prefix=prefix, **kwargs)
+        return self.form(request.POST, request.FILES, prefix=prefix, **kwargs)
+
+    def render_form(self, instance, form):
+        if self.form_template:
+            return render_to_string(self.form_template, {'form': self.form, 'item': instance})
+        return six.text_type(form)
+
+    @property
+    def is_regular_view(self):
+        return self.regular_view or self.method.endswith('_view')
+
     def is_allowed(self, request):
         return not self.permission or request.user.has_perm(self.permission)
 
     def __call__(self, function=None):
         """
-        Allows to use an action as a decorator. Example::
+        Allows this action to be used as a decorator. Example::
 
             class MyReport(AdvancedReport):
                 model = User
@@ -273,59 +300,36 @@ class AdvancedReport(object):
     #: Required. A unique url-friendly name for your Advanced Report
     slug = AutoSlug(remove_suffix='Report')
 
+    #: The request. A new ``AdvancedReport`` instance is created on each request. This request will be saved to this
+    #: property, so you can access it anywhere you need it.
     request = None
-    '''
-    Optional. The request
-    '''
 
+    #: Optional when ``model`` or ``models`` is specified. A list of fields that must be displayed on the report.
     fields = None
-    '''
-    Required. The fields that are included in your Advanced Report as a tuple of strings.
-    When "models" is specified, it takes some values like the verbose_name from your model.
 
-    By default, a lookup will be performed on your items but you can implement the get_FOO_html
-    methods to override the output.
+    #: A list of sortable fields.
+    #: You can sort on multiple fields at the same time using the comma (,) separator.
+    #: The __ lookup syntax is also supported.
+    sortable_fields = None
 
-    field__value__subvalue notation is also supported, but it is recommended to implement that
-    in the get_FOO_html method.
-    '''
+    #: A list of fields that are searchable. When specified or inferred from a given model
+    search_fields = None
 
-    sortable_fields = ()
-    '''
-    Optional. A tuple of fields that are sortable. __ notation is supported and you can sort on
-    multiple fields a the same time by using the comma (,) separator. Only model fields can be
-    sorted. Make sure to add your model to the "models" property.
-    '''
-
-    search_fields = ()
-    '''
-    Optional. A tuple of fields that can be searched.
-    '''
-
+    #: A list of fields that can be filtered.
     filter_fields = ()
-    '''
-    Optional. A tuple of fields that can be filtered.
-    '''
 
+    #: Optional. A dictionary with fields that will be shown as tabs. 1st dict field has to be the field to filter on.
+    #: 2nd dict field is a dict with a options:
+    #:     - `types`: types to filter on.
+    #:     - `images` (optional): `default` will be used for all other fields, use same name as defined in `types` to
+    #: provide a `type` specific image.
     tabbed_filter_fields = ()
-    '''
-    Optional. A dictionary with fields that will be shown as tabs. 1st dict field has to be the field to filter on.
-    2nd dict field is a dict with a options:
-        - `types`: types to filter on.
-        - `images` (optional): `default` will be used for all other fields, use same name as defined in `types` to
-        provide a `type` specific image.
-    '''
 
+    #: Optional. A mapping of filter fields to their list of values.
     filter_values = {}
-    '''
-    Optional. A mapping of filter fields to their list of values.
-    '''
 
+    #: Deprecated. A tuple of available actions for your report. Please use the actions as a decorator instead.
     item_actions = ()
-    '''
-    Optional. A tuple of available actions for your report.
-    See the documentation for the action class above.
-    '''
 
     verbose_name = None
     '''
@@ -484,22 +488,36 @@ class AdvancedReport(object):
 
             # Add defaults from the model admin
             model_admin = admin.site._registry.get(model)
+
             if model_admin:
                 self.model_admin = model_admin
+
                 if self.fields is None and model_admin.list_display:
                     self.fields = model_admin.list_display
-                if not self.search_fields and model_admin.search_fields:
+
+                if self.search_fields is None and model_admin.search_fields:
                     self.search_fields = model_admin.search_fields
-                if not self.sortable_fields and model_admin.list_display:
+
+                if self.sortable_fields is None and model_admin.list_display:
                     self.sortable_fields = model_admin.list_display
+
+        # Some sane defaults
+        if not self.fields:
+            self.fields = ()
+        if not self.search_fields:
+            self.search_fields = ()
+        if not self.sortable_fields:
+            self.sortable_fields = ()
 
         # Expand item_actions with the decorated versions
         item_actions = list(self.item_actions)
         for method_name in dir(self):
             if not hasattr(AdvancedReport, method_name):
                 method = getattr(self, method_name)
+
                 if callable(method) and hasattr(method, 'action'):
                     item_actions.append(method.action)
+
         item_actions.sort(key=lambda a: a.creation_counter)
         self.item_actions = item_actions
 
@@ -1208,12 +1226,21 @@ class AdvancedReport(object):
 
         return actions
 
-    def find_object_action(self, object, method):
+    def find_object_action(self, object, method, request=None):
+        found_action = None
         for a in self.item_actions:
-            if self.verify_action_group(object, a.group):
+            if object is None or self.verify_action_group(object, a.group):
                 if a.method == method:
-                    return a
-        return None
+                    found_action = a
+                    break
+
+        if request is not None:
+            if found_action is None:
+                raise Http404(_(u'Unsupported action method "%s".' % method))
+            if not found_action.is_allowed(request):
+                raise Http404(_(u'You\'re not allowed to execute "%s".' % method))
+
+        return found_action
 
     def find_action(self, method):
         for a in self.item_actions:
