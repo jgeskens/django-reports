@@ -1,10 +1,11 @@
+from __future__ import unicode_literals
 from django.contrib.auth.models import User
 from django import forms
 from django.http.response import HttpResponse
 from django.template.defaultfilters import yesno
 
 from advanced_reports.backoffice.shortcuts import action
-from advanced_reports.defaults import AdvancedReport, ActionException
+from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
 
 
 class UserForm(forms.ModelForm):
@@ -15,14 +16,17 @@ class UserForm(forms.ModelForm):
 class UserReport(AdvancedReport):
     models = (User,)
     fields = ('username', 'first_name', 'last_name',)
+    help_text = 'This is a help text!'
+    links = ((u'Refresh', '.'),)
 
     item_actions = (
         action(method='edit', verbose_name='Edit', form=UserForm, form_via_ajax=True, group='no_superuser'),
-        action(method='send_reminder_email', verbose_name='Send reminder email', individual_display=False),
+        action(method='send_reminder_email', verbose_name='Send reminder email', individual_display=True),
     )
     multiple_actions = True
     template = 'advanced_reports/bootstrap/report.html'
     item_template = 'advanced_reports/bootstrap/item.html'
+    date_range = 'last_login'
 
     def queryset_request(self, request):
         return User.objects.all()
@@ -65,7 +69,7 @@ class SumForm(forms.Form):
     factor = forms.IntegerField(initial=1, required=True)
 
 
-class NoModelReport(AdvancedReport):
+class NoModelReport(BootstrapReport):
     verbose_name = 'number'
     verbose_name_plural = 'numbers'
     fields = ('value', 'square',)
@@ -112,7 +116,7 @@ class NoModelReport(AdvancedReport):
         return response
 
 
-class NewStyleReport(AdvancedReport):
+class NewStyleReport(BootstrapReport):
     model = User
     fields = 'first_name', 'last_name', 'email'
 
