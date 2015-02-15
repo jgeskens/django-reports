@@ -9,6 +9,7 @@ from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.http.response import Http404
+from django.template.context import RequestContext
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
 from django.utils.datastructures import SortedDict
@@ -239,9 +240,11 @@ class action(object):
             return self.form(request.GET, prefix=prefix, **kwargs)
         return self.form(request.POST, request.FILES, prefix=prefix, **kwargs)
 
-    def render_form(self, instance, form):
+    def render_form(self, request, instance, form):
         if self.form_template:
-            return render_to_string(self.form_template, {'form': self.form, 'item': instance})
+            return render_to_string(self.form_template,
+                                    {'form': self.form, 'item': instance},
+                                    context_instance=RequestContext(request))
         return six.text_type(form)
 
     @property

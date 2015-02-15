@@ -17,4 +17,8 @@ urlpatterns = patterns('',
 
     url(r'^api/(?P<slug>[^/]+)/$', api_list, name='advanced_reports_api_list'),
     url(r'^api/(?P<slug>[^/]+)/action/(?P<method>[^/]+)/(?P<object_id>[^/]+)/$', api_action, name='advanced_reports_api_action'),
+    url(r'^api/(?P<slug>[^/]+)/form/(?P<method>[^/]+)/(?P<object_id>[^/]+)/$', api_form,
+        name='advanced_reports_api_form'),
+    url(r'^api/(?P<slug>[^/]+)/form/(?P<method>[^/]+)/$', api_form,
+        name='advanced_reports_api_form'),
 )

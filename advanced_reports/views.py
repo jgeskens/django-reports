@@ -258,7 +258,7 @@ def ajax_form(request, advreport, method, object_id, param=None):
 
 
 @report_view
-def api_form(request, advreport, method, object_id):
+def api_form(request, advreport, method, object_id=None):
     object = object_id and advreport.get_item_for_id(object_id)
     if object:
         advreport.enrich_object(object, request=request)
@@ -271,14 +271,7 @@ def api_form(request, advreport, method, object_id):
     instance = object_id and a.get_form_instance(advreport.get_item_for_id(object_id))
     prefix = object_id or 'actionform'
     a = a.copy_with_instanced_form(advreport, prefix=prefix, instance=instance)
-
-    form_instance = a.form
-    rendered_form = a.form_template \
-                    and render_to_string(a.form_template,
-                                         {'form': form_instance, 'item': instance},
-                                         context_instance=RequestContext(request)) \
-        or unicode(form_instance)
-    return HttpResponse(rendered_form)
+    return HttpResponse(a.render_form(request, instance, a.form))
 
 
 def _action_dict(request, o, action):
@@ -287,12 +280,7 @@ def _action_dict(request, o, action):
         if not action.prefetch_ajax_form and action.form_via_ajax:
             d['form'] = True
         else:
-            form_instance = action.form
-            d['form'] = action.form_template \
-                            and render_to_string(action.form_template,
-                                                 {'form': form_instance, 'item': o},
-                                                 context_instance=RequestContext(request)) \
-                or unicode(form_instance)
+            d['form'] = action.render_form(request, o, action.form)
     if action.confirm:
         context = {'item': o}
         context.update(getattr(o, '__dict__', {}))
@@ -315,6 +303,7 @@ def _is_allowed_multiple_action(request, advreport, action):
     form_allowed = not action.form or hasattr(advreport, '%s_multiple' % action.method)
     return not action.hidden and form_allowed and action.multiple_display and action.is_allowed(request)
 
+
 @report_view
 def api_list(request, advreport, ids=None):
     object_list, extra_context = advreport.get_object_list(request, ids=ids)
@@ -328,7 +317,7 @@ def api_list(request, advreport, ids=None):
         'items_per_page': advreport.items_per_page,
         'item_count': len(object_list),
         'searchable_columns': advreport.searchable_columns,
-        'show_action_bar': advreport.search_fields or advreport.filter_fields,
+        'show_action_bar': bool(advreport.search_fields or advreport.filter_fields),
         'search_fields': advreport.search_fields,
         'filter_fields': advreport.filter_fields,
         'filter_values': advreport.filter_values,
@@ -403,7 +392,7 @@ def api_action(request, advreport, method, object_id=None):
         else:
             # The form was not valid, so we will present the errors to the frontend.
             # Note that we don't supply a success marker.
-            reply.update({'response_method': method, 'response_form': a.render_form(obj, form)})
+            reply.update({'response_method': method, 'response_form': a.render_form(request, obj, form)})
 
     # Attach the updated object (which could also be deleted, who knows) to the reply.
     if obj:

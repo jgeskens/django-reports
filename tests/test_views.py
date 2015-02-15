@@ -4,11 +4,15 @@ from django.contrib.auth.models import User
 from django.http.response import HttpResponse
 from django.test import TestCase
 from django.test import client
+from django.test.client import RequestFactory
 from django.test.utils import override_settings
 import six
 import advanced_reports
+from advanced_reports.backoffice.examples.reports import UserForm
 
 from advanced_reports.defaults import BootstrapReport, action, ActionException
+from advanced_reports.backoffice.shortcuts import action as bootstrap_action
+from advanced_reports.views import api_action
 
 
 class TestForm(forms.Form):
@@ -52,9 +56,17 @@ class SimpleReport(BootstrapReport):
     def details(self, item, form):
         return HttpResponse(form.cleaned_data['testfield'])
 
-    @action(verbose_name='Remove')
+    @bootstrap_action(verbose_name='Edit', form=UserForm, prefetch_ajax_form=True)
+    def edit(self, item, form):
+        form.save()
+
+    @action(verbose_name='Remove', confirm='Are you sure?')
     def remove(self, item):
         item.delete()
+
+    @action(verbose_name='Dialog')
+    def dialog(self, item):
+        return 'Hello I am a dialog for %s!' % item.first_name
 
     def verify_action_group(self, item, group):
         if group is None: return True
@@ -68,7 +80,8 @@ class ReportViewsTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         User.objects.all().delete()
-        cls.u = User.objects.create(username='test', password='test', email='test@example.com')
+        cls.u = User.objects.create(username='test', password='test', email='test@example.com',
+                                    first_name='Test', last_name='User')
         cls.user_checkbox = 'checkbox_0000_%d' % cls.u.pk
 
     def setUp(self):
@@ -124,7 +137,7 @@ class ReportViewsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content,
                          'Username;Email address;First name;Last name;Staff status\n' +
-                         'test;test@example.com;;;False\n')
+                         'test;test@example.com;Test;User;False\n')
 
     def test_api_action_simple(self):
         response = self.client.post('/reports/api/simple/action/test/%d/' % self.u.pk)
@@ -177,11 +190,91 @@ class ReportViewsTestCase(TestCase):
         self.assertEqual(response.content, 'test5 action failed with an ActionException')
 
     def test_api_action_removed_item(self):
-        response = self.client.post('/reports/api/simple/action/remove/%d/' % self.u.pk)
+        u2 = User.objects.create_user('test2', 'test2@example.com', 'test2')
+        response = self.client.post('/reports/api/simple/action/remove/%d/' % u2.pk)
         self.assertIn('application/json', response['Content-Type'])
         data = json.loads(response.content)
         self.assertIn('success', data)
         self.assertIn('item', data)
         self.assertIsNone(data['item'])
         self.assertIn('removed_item_id', data)
-        self.assertEqual(data['removed_item_id'], six.text_type(self.u.pk))
+        self.assertEqual(data['removed_item_id'], six.text_type(u2.pk))
+
+    def test_api_form(self):
+        response = self.client.post('/reports/api/simple/form/details/%d/' % self.u.pk)
+        self.assertContains(response, '%d-testfield' % self.u.pk)
+        response = self.client.post('/reports/api/simple/form/details/')
+        self.assertContains(response, 'actionform-testfield')
+        response = self.client.post('/reports/api/simple/form/edit/%d/' % self.u.pk)
+        self.assertContains(response, '%d-first_name' % self.u.pk)
+        self.assertContains(response, 'value="Test"')
+        self.assertContains(response, 'value="User"')
+        response = self.client.post('/reports/api/simple/form/nonexisting/%d/' % self.u.pk)
+        self.assertEqual(response.status_code, 404)
+
+    def test_string_response_dialog(self):
+        request = RequestFactory().post('/reports/api/simple/action/dialog/%d/' % self.u.pk)
+        response = api_action(request, 'simple', 'dialog', self.u.pk)
+        self.assertEqual(response['dialog_content'], 'Hello I am a dialog for Test!')
+
+    def test_api_list(self):
+        response = self.client.post('/reports/api/simple/')
+        self.assertIn('application/json', response['Content-Type'])
+        data = json.loads(response.content)
+
+        self.assertEqual(data['action_list_type'], 'links')
+        self.assertEqual(data['extra'], {
+            'ascending': True,
+            'order_by': 'username',
+            'order_field': 'username',
+            'ordered_by': 'Username'
+        })
+
+        self.assertIn('field_metadata', data)
+        self.assertEqual(data['field_metadata']['email'], {'full_name': 'email',
+                                                           'name': 'email',
+                                                           'order_by': 'email',
+                                                           'sortable': True,
+                                                           'style': None,
+                                                           'verbose_name': 'Email address'})
+        self.assertEqual(data['filter_fields'], [])
+        self.assertEqual(data['filter_values'], {})
+
+        self.assertIn('header', data)
+        self.assertEqual(data['header'][0], data['field_metadata']['username'])
+
+        self.assertIsInstance(data['item_count'], int)
+        self.assertIsInstance(data['items_per_page'], int)
+        self.assertIn('items', data)
+        self.assertEqual(data['multiple_action_list'], [{'is_regular_view': False,
+                                                         'method': 'test',
+                                                         'verbose_name': 'Test'},
+                                                        {'is_regular_view': False,
+                                                         'method': 'test2',
+                                                         'verbose_name': 'Test2'},
+                                                        {'group': u'test',
+                                                         'is_regular_view': False,
+                                                         'method': 'test3',
+                                                         'verbose_name': 'Test3'},
+                                                        {'is_regular_view': False,
+                                                         'method': 'test4',
+                                                         'verbose_name': 'Test4'},
+                                                        {'is_new_style': True,
+                                                         'is_regular_view': False,
+                                                         'method': 'test5',
+                                                         'verbose_name': 'Test5'},
+                                                        {'confirm': 'Are you sure?',
+                                                         'is_new_style': True,
+                                                         'is_regular_view': False,
+                                                         'method': 'remove',
+                                                         'verbose_name': 'Remove'},
+                                                        {'is_new_style': True,
+                                                         'is_regular_view': False,
+                                                         'method': 'dialog',
+                                                         'verbose_name': 'Dialog'}])
+
+        self.assertFalse(data['multiple_actions'])
+        self.assertTrue(data['report_header_visible'])
+        self.assertEqual(data['search_fields'], ['username', 'first_name', 'last_name', 'email'])
+        self.assertEqual(data['searchable_columns'], 'You can search by Username, First name, Last name, Email address')
+        self.assertTrue(data['show_action_bar'])
