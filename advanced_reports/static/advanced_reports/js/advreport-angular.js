@@ -311,17 +311,11 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
                     response.link_action,
                     response.link_action.data
                 );
-                console.log($scope.get_action_view_url(
-                    response.item,
-                    response.link_action,
-                    response.link_action.data
-                ));
             }else{
                 var action_params = $scope.multiple_action_params(response.link_action.method);
                 action_params = angular.extend(action_params, response.link_action.data);
                 $scope.multiple_action = '';
                 window.location.href = $scope.view.action_link('multiple_action_view', action_params);
-                console.log($scope.view.action_link('multiple_action_view', action_params));
             }
         }else if (response.success){
             $scope.update_item(item, response, action.next_on_success);
