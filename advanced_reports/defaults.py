@@ -243,7 +243,7 @@ class action(object):
     def render_form(self, request, instance, form):
         if self.form_template:
             return render_to_string(self.form_template,
-                                    {'form': self.form, 'item': instance},
+                                    {'form': form, 'item': instance},
                                     context_instance=RequestContext(request))
         return six.text_type(form)
 

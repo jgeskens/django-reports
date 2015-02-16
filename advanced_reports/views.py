@@ -281,10 +281,10 @@ def _action_dict(request, o, action):
             d['form'] = True
         else:
             d['form'] = action.render_form(request, o, action.form)
-    if action.confirm:
+    if action.confirm and o:
         context = {'item': o}
         context.update(getattr(o, '__dict__', {}))
-        d['confirm'] = action.confirm % Resolver(context)
+        d['confirm'] = o and action.confirm % Resolver(context) or None
     d['is_regular_view'] = action.is_regular_view
     return d
 
