@@ -222,7 +222,7 @@ class action(object):
 
         if 'param' in kwargs and not kwargs['param']:
             kwargs.pop('param')
-        
+
         if self.form_instance:
             return self.form_instance(instance, *args, **kwargs) \
                 if callable(self.form_instance) \
@@ -845,32 +845,29 @@ class AdvancedReport(object):
         # Extract parameters
         q = params['q'].lower() if 'q' in params else None
         exact = 'exact' in params
-        from_date = params.get('from', '')
-        to_date = params.get('to', '')
-        from_date_struct = time.strptime(params['from'], '%Y-%m-%d') if from_date else None
-        to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
         filters_from_request = self.get_filters_from_request(request)
 
         if filters_from_request:
             queryset = queryset.filter(**filters_from_request)
 
-        if from_date_struct and to_date_struct:
+        if params.get('from', '') or params.get('to', ''):
             date_range_query = Q()
 
-            # Filtering on date range
+            if params.get('from', ''):
+                from_date_struct = time.strptime(params['from'], '%Y-%m-%d')
+                from_date = datetime.datetime(year=from_date_struct.tm_year,
+                                              month=from_date_struct.tm_mon,
+                                              day=from_date_struct.tm_mday)
+            if params.get('to', ''):
+                to_date_struct = time.strptime(params['to'], '%Y-%m-%d')
+                to_date = datetime.datetime(year=to_date_struct.tm_year,
+                                            month=to_date_struct.tm_mon,
+                                            day=to_date_struct.tm_mday)
+                # Date range has no hour so we add 1 day to the to_date so that we get the results of that day as well
+                # eg: if we selected from: 2011-01-17 and to: 2011-01-18, then the actual date range will be:
+                # between 2011-01-17 00:00 and 2011-01-19 00:00
+                to_date += datetime.timedelta(days=1)
 
-            from_date = datetime.datetime(year=from_date_struct.tm_year,
-                                          month=from_date_struct.tm_mon,
-                                          day=from_date_struct.tm_mday)
-            to_date = datetime.datetime(year=to_date_struct.tm_year,
-                                        month=to_date_struct.tm_mon,
-                                        day=to_date_struct.tm_mday)
-
-            # Date range has no hour so we add 1 day to the to_date so that we get the results of that day aswell
-            # eg: if we selected from: 2011-01-17 and to: 2011-01-18, then the actual date rangewill be:
-            # between 2011-01-17 00:00 and 2011-01-19 00:00
-
-            to_date += datetime.timedelta(days=1)
             uses_model = False
 
             field = self.get_model_field(self.date_range.split('__')[0])
@@ -879,9 +876,16 @@ class AdvancedReport(object):
                 fake_fields.append(self.date_range)
             else:
                 uses_model = True
+
+        if uses_model:
+            if params.get('from', '') and params.get('to', ''):
                 date_range_query = Q(**{'%s__range' % self.date_range: (from_date, to_date)})
 
-            queryset = queryset.filter(date_range_query)
+                queryset = queryset.filter(date_range_query)
+            elif params.get('from', ''):
+                queryset = queryset.filter(Q(**{'%s__gte' % self.date_range: from_date}))
+            elif params.get('to', ''):
+                queryset = queryset.filter(Q(**{'%s__lt' % self.date_range: to_date}))
 
         if q:
             if uses_model is None:
