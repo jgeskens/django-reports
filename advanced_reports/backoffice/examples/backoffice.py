@@ -1,5 +1,6 @@
 from django.conf.urls import url
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
@@ -11,6 +12,9 @@ import advanced_reports
 
 from advanced_reports.backoffice.examples.reports import UserReport, UserForm
 from advanced_reports.backoffice.examples.views import SimpleView
+
+
+User = get_user_model()
 
 
 class TestBackOffice(BackOfficeBase):

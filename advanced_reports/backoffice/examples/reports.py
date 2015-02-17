@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django import forms
 from django.http.response import HttpResponse
 from django.template.defaultfilters import yesno
@@ -8,14 +8,18 @@ from advanced_reports.backoffice.shortcuts import action
 from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
 
 
+User = get_user_model()
+
+
 class UserForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ('first_name', 'last_name')
 
+
 class UserReport(AdvancedReport):
     models = (User,)
-    fields = ('username', 'first_name', 'last_name',)
+    fields = ('email', 'first_name', 'last_name',)
     help_text = 'This is a help text!'
     links = ((u'Refresh', '.'),)
 
