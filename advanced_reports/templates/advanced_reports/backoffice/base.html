@@ -107,6 +107,7 @@
                             <img ng-show="isLoading()" src="{{ STATIC_URL }}advanced_reports/img/modybox/loading.gif">
                         </div>
 
+                        {% block navbar-right %}{% endblock %}
 
                         <form class="navbar-form navbar-right">
                             <a href="{% url 'backoffice:logout' %}" class="btn btn-danger">{% trans "Sign out" %}</a>

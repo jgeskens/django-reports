@@ -756,8 +756,12 @@ app.directive('autoCompleteOld', ['$timeout', 'boUtils', function($timeout, boUt
 
 app.directive('linkTo', function(){
    return function(scope, element, attrs){
-       var url = scope.$eval(attrs.linkTo);
-       element.attr('href', url);
+       var url_or_route = scope.$eval(attrs.linkTo);
+       if ((typeof url_or_route) == 'string'){
+           element.attr('href', url_or_route);
+       }else{
+           element.attr('href', scope.get_url(url_or_route));
+       }
    };
 });
 
