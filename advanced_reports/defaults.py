@@ -14,7 +14,7 @@ from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
 from django.utils.datastructures import SortedDict
 from django.utils.safestring import mark_safe
-from django.utils.html import strip_tags
+from django.utils.html import strip_tags, escape
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
 
@@ -1336,3 +1336,6 @@ class Resolver(object):
 class BootstrapReport(AdvancedReport):
     template = 'advanced_reports/bootstrap/report.html'
     item_template = 'advanced_reports/bootstrap/item.html'
+
+    def get_html_for_value(self, value):
+        return escape(six.text_type(value))
