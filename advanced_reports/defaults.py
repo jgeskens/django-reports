@@ -739,9 +739,15 @@ class AdvancedReport(object):
         return result.iteritems()
 
     def get_filters_from_request(self, request):
+        """
+        Return a dict used as argument to Model.objects.filter() function.
+        But we need to be sure that we can filter on these fields so we check if there is no filter_* function defined
+        in advanced report devinition
+        """
         result = {}
         for filter_field in self.filter_fields:
-            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip():
+            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip() and \
+                    not hasattr(self, 'filter_%s' % filter_field):
                 result[filter_field] = request.REQUEST[filter_field]
         return result
 
