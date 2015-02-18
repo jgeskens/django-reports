@@ -18,7 +18,7 @@ def staff_member_required(backoffice):
 
             assert hasattr(request, 'session'), "Advanced Reports Backoffice requires session middleware to be installed. Edit your MIDDLEWARE_CLASSES setting to insert 'django.contrib.sessions.middleware.SessionMiddleware'."
             defaults = {
-                'template_name': 'advanced_reports/backoffice/login.html',
+                'template_name': backoffice.login_template,
                 'authentication_form': AdminAuthenticationForm,
                 'extra_context': {
                     'backoffice': backoffice,
