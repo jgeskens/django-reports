@@ -3,3 +3,9 @@ django-widget-tweaks==1.3
 Pygments==2.0.1
 -e git+http://github.com/vikingco/django-ajax-utilities.git#egg=django-ajax-utilities
 -e git+http://github.com/vikingco/django-progress.git#egg=django-progress
+-e git+http://github.com/jgeskens/bo-querybuilder.git#egg=bo-querybuilder
+-e git+https://github.com/vikingco/django-template-tags.git#egg=django-template-tags
+coverage==3.7.1
+coveralls
+six==1.9.0
+django-extensions==1.5.0

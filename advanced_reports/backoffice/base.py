@@ -671,12 +671,29 @@ class SearchMixin(object):
 
 
 class BackOfficeView(object):
+    """
+    A ``BackOfficeView`` is a combination of Python/Django code with the ``view`` AngularJS Directive.
+    When registered to a ``BackOfficeBase`` subclass instance, this will be shown by the ``view`` directive
+    when called with the correct ``slug``.
+    """
+
+    #: The slug of the view. If not explicitly filled in, the "View" suffix will be stripped off the
+    #: subclass name and the remaining prefix will be converted to lowercase. For example, a
+    #: ``UserView`` subclass will get automatically the slug ``'user'``.
     slug = AutoSlug(remove_suffix='View')
+
+    #: The template for the view. If not explicitly filled in, it will default to, for example when the
+    #: subclass has the name ``UserView``, ``'advanced_reports/backoffice/views/user.html'``.
     template = AutoTemplate('views', remove_suffix='View')
 
+    #: When filled in, this permission will be checked against the currently logged in user. If
+    #: the user does not have this permission, nothing of this view will be exposed to this user.
     permission = None
 
     def serialize(self, content, extra_context=None):
+        """
+        Serializes the given content to a format that is easy to encode to JSON.
+        """
         if isinstance(content, str):
             content = content.decode('utf-8')
 
@@ -859,6 +876,12 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
     #: to do) and put your own template here.
     model_template = 'advanced_reports/backoffice/model-base.html'
 
+    #: The template file that will be used to show the login form.
+    login_template = 'advanced_reports/backoffice/login.html'
+
+    #: The template file that will be used as the logout confirmation page.
+    logout_template = 'advanced_reports/backoffice/logout.html'
+
     def __init__(self, name='backoffice', app_name='backoffice'):
         """
         Constructor for a BackOfficeBase implementation.
@@ -930,7 +953,7 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
         extra context.
         """
         from django.contrib.auth.views import logout
-        kwargs['template_name'] = 'advanced_reports/backoffice/logout.html'
+        kwargs['template_name'] = self.logout_template
         kwargs['extra_context'] = self.default_context()
         return logout(request, *args, **kwargs)
 

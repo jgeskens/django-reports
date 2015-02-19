@@ -2,7 +2,7 @@ import datetime
 import os
 import subprocess
 
-def get_git_version():
+def get_git_version(): #pragma: no cover
     git_dir = os.path.abspath(
         os.path.join(
             os.path.abspath(os.path.dirname(__file__)),

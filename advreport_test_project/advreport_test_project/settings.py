@@ -129,6 +129,10 @@ INSTALLED_APPS = (
     'advanced_reports',
     'advanced_reports.backoffice',
     'widget_tweaks',
+    'django_ajax',
+    'django_template_tags',
+    'djprogress',
+    'django_extensions',
 )
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'

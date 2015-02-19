@@ -14,4 +14,5 @@ urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
     url(r'^test-backoffice/', include(test_backoffice.urls)),
     url(r'^todos-backoffice/', include(todos_backoffice.urls)),
+    url(r'^reports/', include('advanced_reports.urls')),
 )

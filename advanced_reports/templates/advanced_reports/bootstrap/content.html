@@ -1,0 +1,51 @@
+{% load url from future %}
+{% load i18n pagination %}
+
+<div class="advreport panel panel-default"
+        id="advreport_{{ advreport.slug }}"
+        data-slug="{{ advreport.slug }}"
+        data-animation="{{ advreport.animation }}"
+        data-link="{% url 'advanced_reports_list' advreport.slug %}">
+
+{% if advreport.report_header_visible %}
+    {% include "advanced_reports/bootstrap/header.html" %}
+{% endif %}
+
+{% paginate paginated %}
+<table class="data table">
+    {% if advreport.header_visible %}
+    <tr>
+        {% if advreport.multiple_actions %}<th><input type="checkbox" name="selector" id="selector"/></th>{% endif %}
+        {% for column_header in advreport.column_headers %}
+        <th{% if column_header.style %} style="{{ column_header.style }}"{% endif %}>
+            {% if column_header.sortable %}
+                {% ifequal column_header.name order_field %}
+                    <a class="underline" href="{{ request.path }}?order={% if ascending %}-{% endif %}{{ column_header.order_by }}{% with "order" as excluded_fields %}{% include "advanced_reports/inc_querystring.html" %}{% endwith %}">{{ column_header.verbose_name }}</a>
+                    {% if ascending %}
+                    &darr;
+                    {% else %}
+                    &uarr;
+                    {% endif %}
+                {% else %}
+                    <a href="{{ request.path }}?order={{ column_header.order_by }}{% with "order" as excluded_fields %}{% include "advanced_reports/inc_querystring.html" %}{% endwith %}">{{ column_header.verbose_name }}</a>
+                {% endifequal %}
+            {% else %}
+                {{ column_header.verbose_name }}
+            {% endif %}
+        </th>
+        {% endfor %}
+        <th/>
+    </tr>
+    {% endif %}
+    {% for object in paginated.object_list %}
+        {% include "advanced_reports/bootstrap/item.html" %}
+    {% empty %}
+    <tr>
+        <td colspan="{% if not advreport.single_mode and advreport.multiple_actions %}{{ advreport.column_headers|length|add:2 }}{% else %}{{ advreport.column_headers|length|add:1 }}{% endif %}" class="alignCenter italic lighter">
+            {{ advreport.get_empty_text }}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endpaginate %}
+</div>

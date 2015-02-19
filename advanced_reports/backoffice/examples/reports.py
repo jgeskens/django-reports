@@ -1,10 +1,15 @@
-from django.contrib.auth.models import User
+from __future__ import unicode_literals
+from django.contrib.auth import get_user_model
 from django import forms
 from django.http.response import HttpResponse
 from django.template.defaultfilters import yesno
+from django.utils.html import escape
 
 from advanced_reports.backoffice.shortcuts import action
-from advanced_reports.defaults import AdvancedReport, ActionException
+from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
+
+
+User = get_user_model()
 
 
 class UserForm(forms.ModelForm):
@@ -12,26 +17,32 @@ class UserForm(forms.ModelForm):
         model = User
         fields = ('first_name', 'last_name')
 
-class UserReport(AdvancedReport):
+
+class UserReport(BootstrapReport):
     models = (User,)
-    fields = ('username', 'first_name', 'last_name',)
+    fields = ('email', 'first_name', 'last_name',)
+    help_text = 'This is a help text!'
+    links = ((u'Refresh', '.'),)
 
     item_actions = (
         action(method='edit', verbose_name='Edit', form=UserForm, form_via_ajax=True, group='no_superuser'),
-        action(method='send_reminder_email', verbose_name='Send reminder email', individual_display=False),
+        action(method='send_reminder_email', verbose_name='Send reminder email', individual_display=True),
     )
     multiple_actions = True
+    template = 'advanced_reports/bootstrap/report.html'
+    item_template = 'advanced_reports/bootstrap/item.html'
+    date_range = 'last_login'
 
     def queryset_request(self, request):
         return User.objects.all()
 
     def get_username_html(self, item):
-        return u'<a href="#/user/%d/">%s</a>' % (item.pk, item.username)
+        return u'<a href="#/user/%d/">%s</a>' % (item.pk, escape(item.username))
 
     def get_html_for_value(self, value):
         if isinstance(value, bool):
             return yesno(value, '<i class="glyphicon glyphicon-ok-circle">,<i class="glyphicon glyphicon-remove-circle">')
-        return value
+        return super(UserReport, self).get_html_for_value(value)
 
     def edit(self, item, form):
         form.save()
@@ -55,16 +66,27 @@ class NoModel(object):
         return self.value * self.value
 
 
-class NoModelReport(AdvancedReport):
+class CSVForm(forms.Form):
+    filename = forms.CharField(initial='numbers.csv', required=True)
+
+
+class SumForm(forms.Form):
+    factor = forms.IntegerField(initial=1, required=True)
+
+
+class NoModelReport(BootstrapReport):
     verbose_name = 'number'
     verbose_name_plural = 'numbers'
     fields = ('value', 'square',)
     items_per_page = 10
     multiple_actions = True
+    search_fields = ('value', 'square',)
 
     item_actions = (
-        action(method='calculate_sum', verbose_name='Calculate sum', individual_display=False),
-        action(method='export_as_csv_view', verbose_name='Export selection as CSV', individual_display=False)
+        action(method='calculate_sum', verbose_name='Calculate sum', individual_display=False,
+               form=SumForm, form_via_ajax=True),
+        action(method='export_as_csv_view', verbose_name='Export selection as CSV',
+               individual_display=True, form=CSVForm, form_via_ajax=True)
     )
 
     def queryset_request(self, request):
@@ -76,20 +98,37 @@ class NoModelReport(AdvancedReport):
     def get_item_for_id(self, item_id):
         return NoModel(int(item_id))
 
-    def calculate_sum_multiple(self, items):
+    def calculate_sum_multiple(self, items, form):
+        factor = form.cleaned_data['factor']
         return {
-            'dialog_content': 'The sum is: %d' % sum((item.value for item in items)),
+            'dialog_content': 'The sum is: %d' % (sum((item.value for item in items)) * factor),
             'dialog_style': {'width': '300px'}
         }
 
-    def export_as_csv_view_multiple(self, items):
+    def export_as_csv_view(self, item, form):
+        return self.export_as_csv_view_multiple([item], form)
+
+    def export_as_csv_view_multiple(self, items, form):
         import csv
+        filename = form.cleaned_data['filename']
         response = HttpResponse()
         writer = csv.writer(response, dialect='excel')
         writer.writerow(('Value', 'Square'))
         for item in items:
             writer.writerow((item.value, item.square))
         response['Content-Type'] = 'application/csv'
-        response['Content-Disposition'] = 'attachment; filename="numbers.csv"'
+        response['Content-Disposition'] = 'attachment; filename="%s"' % filename
         return response
 
+
+class NewStyleReport(BootstrapReport):
+    model = User
+    fields = 'first_name', 'last_name', 'email'
+
+    @action('Say hello', css_class='btn-primary')
+    def hello(self, item):
+        return 'Hello, %s!' % escape(self.request.user.first_name)
+
+    @action('Edit user', form=UserForm)
+    def edit(self, item, form):
+        form.save()

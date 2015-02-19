@@ -1,0 +1,17 @@
+{% extends "advanced_reports/bootstrap/base.html" %}
+
+{% load staticfiles i18n %}
+
+{% block title %}{{ advreport.title }}{% endblock %}
+{% block extra-head %}
+    {% include "advanced_reports/inc_css.html" %}
+    {% include "advanced_reports/inc_js.html" %}
+{% endblock %}
+{% block head-title %}{{ advreport.title }}{% endblock %}
+
+{% block navbar %}
+{% endblock %}
+
+{% block content-inner %}
+    {% include "advanced_reports/bootstrap/content.html" %}
+{% endblock %}
