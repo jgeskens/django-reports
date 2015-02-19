@@ -29,7 +29,7 @@ app.factory('boApi', ['$http', '$q', 'boUtils', '$timeout', function($http, $q, 
             if (this.requests == 0 && delta > 0){
                 this.to = $timeout(function(){
                     that.slow = true;
-                }, 1000);
+                }, 2000);
             }
             this.requests += delta;
             if (this.requests == 0 && delta < 0){
@@ -115,7 +115,9 @@ app.factory('boApi', ['$http', '$q', 'boUtils', '$timeout', function($http, $q, 
     };
 }]);
 
-app.controller('MainController', ['$scope', '$http', '$location', 'boApi', '$route', 'boReverser', function($scope, $http, $location, boApi, $route, boReverser){
+app.controller('MainController',
+['$scope', '$http', '$location', 'boApi', '$route', '$parse', '$q', 'boReverser',
+function($scope, $http, $location, boApi, $route, $parse, $q, boReverser){
     $scope.params = {};
 
     $scope.path = function(){
@@ -166,7 +168,7 @@ app.controller('MainController', ['$scope', '$http', '$location', 'boApi', '$rou
 
     $scope.search_show_results_preview = function(){
         $scope.search_results_preview_visible = true;
-    }
+    };
 
     $scope.is_search_results_preview_visible = function(){
         var visible = $scope.search_results_preview_visible && $scope.search_query.length > 0;
@@ -235,6 +237,40 @@ app.controller('MainController', ['$scope', '$http', '$location', 'boApi', '$rou
                 });
             }
         }
+    };
+
+    $scope.action = function(method, actionParams, reloadOnSuccess, url_suffix){
+        return boApi.post('model_action', {method: method, params: actionParams || {}, model: $scope.model.model
+        }, url_suffix).then(function(result){
+            if (angular.isUndefined(reloadOnSuccess) || reloadOnSuccess)
+                $scope.fetchModel(true);
+            return result;
+        }, function(error, status){
+            return $q.reject(error, status);
+        });
+    };
+
+    $scope.call = function(method, actionParams){
+        return $scope.action(method, actionParams, false);
+    };
+
+    $scope.goto = function(route){
+        return function(){
+            window.location.href = $scope.get_url(route);
+        };
+    };
+
+    $scope.broadcast = function(event){
+        return function(){
+            $scope.$broadcast(event);
+        };
+    };
+
+    $scope.exec = function(code){
+        return function(data){
+            $scope.data = data;
+            $parse(code)($scope);
+        };
     };
 
     $scope.$on('$routeChangeSuccess', function (){
@@ -407,6 +443,9 @@ app.directive('view', ['$compile', '$q', 'boApi', 'boUtils', '$timeout', '$parse
                         return $q.reject(error, status);
                     });
                 };
+                data.call = function(method, actionParams){
+                    return data.action(method, actionParams, false);
+                };
                 data.action_link = function(method, actionParams){
                     var combinedParams = angular.extend({method: method}, params, actionParams);
                     return boApi.link('view_view', combinedParams);
@@ -500,7 +539,7 @@ app.factory('boUtils', function(){
 
 app.filter('capitalize', function(){
     return function(input){
-        if (input.length > 0)
+        if (input && input.length > 0)
             return input.charAt(0).toUpperCase() + input.slice(1);
         return '';
    };
@@ -771,26 +810,6 @@ app.directive('boModal', function(){
     };
 });
 
-app.directive('boParallax', function(){
-    return function(scope, element, attrs){
-        scope.$watch(function(){
-            return element.innerHeight();
-        }, function(height){
-            var offsetTop = $('body').offset().top,
-                scrollTop = $(window).scrollTop(),
-                orgHeight = element.innerHeight();
-
-            $(window).unbind('scroll').bind('scroll', function(){
-                scrollTop = $(window).scrollTop();
-                
-                if (offsetTop >= scrollTop && scrollTop < 0) {
-                    element.css('height', (orgHeight + -scrollTop) + 'px');
-                }
-            });
-        });
-    };
-});
-
 app.directive('boPaginator', ['$timeout', function($timeout){
     return {
         template: '<ul class="pagination" ng-show="page_count > 1">' +
@@ -819,3 +838,4 @@ app.directive('boPaginator', ['$timeout', function($timeout){
         scope: {page: '=', page_count: '=pageCount', on_change: '&onChange'}
     };
 }]);
+

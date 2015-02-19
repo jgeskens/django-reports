@@ -1,0 +1,22 @@
+<script type="text/ng-template" id="/home.html">
+    <div class="container">
+        <div class="row">
+            <div class="col-xs-12">
+                <h2>Home</h2>
+                <p>
+                    Welcome to the Advanced Reports and Backoffice Django Test Project! That is a whole mouthful.
+                    Feel free to click around, try some things. Be sure to check out the search functionality and
+                    the <a href="{% url 'todos:examples' %}">examples</a> page.
+                </p>
+                <div class="list-group">
+                    <div class="list-group-item">
+                        <a href="{% url 'todos:users' %}">Users</a>
+                    </div>
+                    <div class="list-group-item">
+                        <a href="{% url 'todos:examples' %}">Examples</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>

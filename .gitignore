@@ -1,6 +1,7 @@
 *.log
 *.pot
 local_settings.py
+local.py
 settings_local.py
 *.py[co]
 *.idea
@@ -40,3 +41,6 @@ local.properties
 # CDT-specific
 .cproject
 .DS_Store
+
+advreport_test_project/test.db
+

@@ -1,0 +1,19 @@
+{% extends "advreport_examples/page-base.html" %}
+
+{% block title %}Users - {{ block.super }}{% endblock %}
+{% block page-title %}Users{% endblock %}
+
+{% block content %}
+
+<div class="container">
+    <div class="row">
+        <div class="col-xs-12">
+            <p></p>
+            <div class="panel panel-default">
+                <div view="advanced_report" params="{slug: 'user'}"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

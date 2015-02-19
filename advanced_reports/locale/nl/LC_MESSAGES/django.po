@@ -1,199 +1,400 @@
 # Translations from City Live i18n database
 # Generated: 2011-03-29 11:06:23.288121
-#, fuzzy
 msgid ""
 msgstr ""
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-01-11 22:14+0100\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Project-Id-Version: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: nl\n"
+"X-Generator: Poedit 1.7.3\n"
 
-#: defaults.py:144
+#: defaults.py:190
+#, python-format
 msgid "Successfully executed \"%s\""
 msgstr "Uitvoeren van \"%s\" geslaagd"
 
-#: defaults.py:603
+#: defaults.py:925
+#, python-format
 msgid "You can search by %(fields)s"
 msgstr "Je kan zoeken op %(fields)s"
 
-#: defaults.py:792
+#: defaults.py:1129
+#, python-format
 msgid "There are no %(items)s to display."
 msgstr "Er zijn geen %(items)s om weer te geven."
 
-#: views.py:41
+#: views.py:50
 msgid "You did not select any action."
 msgstr "Je hebt geen enkele actie geselecteerd."
 
-#: views.py:45
+#: views.py:55
+#, python-format
 msgid "You did not select any %(object)s."
 msgstr "Je hebt geen %(object)s geselecteerd."
 
-#: views.py:54
+#: views.py:65
+#, python-format
 msgid "Successfully executed action on %(count)d %(objects)s"
 msgstr "Uitvoeren van actie op %(count)d %(objects)s geslaagd"
 
-#: views.py:58
+#: views.py:69
+#, python-format
 msgid "No selected %(object)s is applicable for this action."
 msgstr "Deze actie is op geen %(object)s van toepassing."
 
-#: views.py:192
+#: views.py:177 views.py:400
+#, python-format
+msgid "Unsupported action method \"%s\"."
+msgstr "Actiemethode \"%s\" niet ondersteund."
+
+#: views.py:219 views.py:442
 msgid "Unsupported request method."
 msgstr "Aanvraagsmethode niet ondersteund."
 
-#: templates/advanced_reports/inc_header.html:54
-#: templates/advanced_reports/inc_header.html:66
-#: templates/advanced_reports/inc_header.html:79
+#: views.py:402
+#, python-format
+msgid "You're not allowed to execute \"%s\"."
+msgstr "Je hebt niet genoeg rechten om \"%s\" uit te voeren."
+
+#: backoffice/contrib/views.py:88
+msgid "This action does not support batch operations."
+msgstr "Deze actie ondersteunt geen batch-bewerkingen."
+
+#: backoffice/contrib/views.py:92
+msgid "You are not allowed to execute this action."
+msgstr "Je hebt niet genoeg rechten om deze actie uit te voeren."
+
+#: backoffice/contrib/views.py:94
+msgid "This action is not applicable to this item."
+msgstr "Deze actie is niet van toepassing op dit onderdeel."
+
+#: backoffice/contrib/views.py:98
+msgid "Successfully executed action on all selected items."
+msgstr "Uitvoeren van actie op alle geselecteerde onderdelen is geslaagd."
+
+#: backoffice/contrib/views.py:100
+msgid "Some actions were successful, but some were also failed."
+msgstr "Sommige acties waren geslaagd, maar anderen hebben gefaald."
+
+#: backoffice/contrib/views.py:102
+msgid "No action on the selected items was successful."
+msgstr "Geen enkele actie op de geselecteerde onderdelen is geslaagd."
+
+#: backoffice/contrib/views.py:120
+msgid "No items were applicable for this action."
+msgstr "Deze actie kan op geen enkel onderdeel worden toegepast."
+
+#: backoffice/templatetags/backoffice_filters.py:69
+msgid "and"
+msgstr "en"
+
+#: backoffice/templatetags/backoffice_filters.py:100
+msgid "This field is required."
+msgstr "Dit veld is verplicht."
+
+#: backoffice/templatetags/backoffice_filters.py:102
+#, python-format
+msgid "%s is required."
+msgstr "%s is verplicht."
+
+#: backoffice/templatetags/backoffice_filters.py:104
+#, python-format
+msgid "%s are required."
+msgstr "%s zijn verplicht."
+
+#: templates/advanced_reports/inc_header.html:69
+#: templates/advanced_reports/inc_header.html:80
+#: templates/advanced_reports/inc_header.html:110
 msgid "Search"
 msgstr "Zoek"
 
-#: templates/advanced_reports/inc_header.html:56
-#: templates/advanced_reports/inc_header.html:69
+#: templates/advanced_reports/inc_header.html:71
+#: templates/advanced_reports/inc_header.html:83
 msgid "exact"
 msgstr "exact"
 
-#: templates/advanced_reports/inc_header.html:57
-#: templates/advanced_reports/inc_header.html:125
-msgid "Go"
-msgstr "Ga"
-
-#: templates/advanced_reports/inc_header.html:59
-#: templates/advanced_reports/inc_header.html:81
+#: templates/advanced_reports/inc_header.html:73
+#: templates/advanced_reports/inc_header.html:94
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:126
 msgid "show all"
 msgstr "toon alle"
 
-#: templates/advanced_reports/inc_header.html:72
+#: templates/advanced_reports/inc_header.html:86
 msgid "from"
 msgstr "van"
 
-#: templates/advanced_reports/inc_header.html:75
+#: templates/advanced_reports/inc_header.html:89
 msgid "until"
 msgstr "tot"
 
-#: templates/advanced_reports/inc_header.html:99
+#: templates/advanced_reports/inc_header.html:121
 msgid "Select"
 msgstr "Selecteren"
 
-#: templates/advanced_reports/inc_header.html:101
+#: templates/advanced_reports/inc_header.html:123
 msgid "all"
 msgstr "alle"
 
-#: templates/advanced_reports/inc_header.html:102
+#: templates/advanced_reports/inc_header.html:124
 msgid "none"
 msgstr "geen"
 
-#: templates/advanced_reports/inc_header.html:103
+#: templates/advanced_reports/inc_header.html:125
 msgid "toggle"
 msgstr "toggle"
 
-#: templates/advanced_reports/inc_header.html:107
+#: templates/advanced_reports/inc_header.html:129
 msgid "With selected"
 msgstr "Met geselecteerd"
 
-#: templates/advanced_reports/inc_header.html:114
-msgid "%(action_name)s: Are you sure you want to execute this on the selected %(items)s?"
-msgstr "%(action_name)s: Ben je zeker dat je dit wil uitvoeren op de geselecteerde %(items)s?"
+#: templates/advanced_reports/inc_header.html:136
+#, python-format
+msgid ""
+"%(action_name)s: Are you sure you want to execute this on the selected "
+"%(items)s?"
+msgstr ""
+"%(action_name)s: Ben je zeker dat je dit wil uitvoeren op de geselecteerde "
+"%(items)s?"
 
-#: templates/advanced_reports/inc_header.html:138
+#: templates/advanced_reports/inc_header.html:147
+msgid "Go"
+msgstr "Ga"
+
+#: templates/advanced_reports/inc_header.html:160
 msgid "search result,search results"
 msgstr "zoekresultaat,zoekresultaten"
 
-#: templates/advanced_reports/inc_header.html:154
+#: templates/advanced_reports/inc_header.html:176
 msgid "ordered by"
 msgstr "gerangschikt op"
 
-#: templates/advanced_reports/inc_script.html:20
-msgid "Su"
-msgstr "Zo"
-
-#: templates/advanced_reports/inc_script.html:21
-msgid "Mo"
-msgstr "Ma"
-
-#: templates/advanced_reports/inc_script.html:22
-msgid "Tu"
-msgstr "Di"
-
-#: templates/advanced_reports/inc_script.html:23
-msgid "We"
-msgstr "Wo"
-
-#: templates/advanced_reports/inc_script.html:24
-msgid "Th"
-msgstr "Do"
-
-#: templates/advanced_reports/inc_script.html:25
-msgid "Fr"
-msgstr "Vr"
-
-#: templates/advanced_reports/inc_script.html:26
-msgid "Sa"
-msgstr "Za"
-
-#: templates/advanced_reports/inc_script.html:27
-msgid "January"
-msgstr "Januari"
-
-#: templates/advanced_reports/inc_script.html:28
-msgid "February"
-msgstr "Februari"
-
-#: templates/advanced_reports/inc_script.html:29
-msgid "March"
-msgstr "Maart"
-
-#: templates/advanced_reports/inc_script.html:30
-msgid "April"
-msgstr "April"
-
-#: templates/advanced_reports/inc_script.html:31
-msgid "May"
-msgstr "Mei"
-
-#: templates/advanced_reports/inc_script.html:32
-msgid "June"
-msgstr "Juni"
-
-#: templates/advanced_reports/inc_script.html:33
-msgid "July"
-msgstr "Juli"
-
-#: templates/advanced_reports/inc_script.html:34
-msgid "August"
-msgstr "Augustus"
-
-#: templates/advanced_reports/inc_script.html:35
-msgid "September"
-msgstr "September"
-
-#: templates/advanced_reports/inc_script.html:36
-msgid "October"
-msgstr "Oktober"
-
-#: templates/advanced_reports/inc_script.html:37
-msgid "November"
-msgstr "November"
-
-#: templates/advanced_reports/inc_script.html:38
-msgid "December"
-msgstr "December"
-
-#: templates/advanced_reports/inc_script.html:92
-#: templates/advanced_reports/inc_script.html:313
-#: templates/advanced_reports/inc_script.html:352
-msgid "Confirm"
-msgstr "Bevestigen"
-
-#: templates/advanced_reports/inc_script.html:308
-#: templates/advanced_reports/inc_script.html:346
-msgid "Alert"
-msgstr "Melding"
-
 #: templates/advanced_reports/item_row.html:18
-#: templates/advanced_reports/searchitems_item_row.html:20
+#: templates/advanced_reports/searchitems_item_row.html:21
 msgid "show options"
 msgstr "toon opties"
 
 #: templates/advanced_reports/item_row.html:19
-#: templates/advanced_reports/searchitems_item_row.html:21
+#: templates/advanced_reports/searchitems_item_row.html:22
 msgid "hide options"
 msgstr "verberg opties"
 
+#: templates/advanced_reports/backoffice/_form_errors.html:8
+msgid "Woops, there are some errors!"
+msgstr "Oeps, er zijn fouten!"
+
+#: templates/advanced_reports/backoffice/base.html:42
+msgid "Loading... One moment..."
+msgstr "Laden... even geduld aub..."
+
+#: templates/advanced_reports/backoffice/base.html:84
+msgid "No results found"
+msgstr "Geen resultaten gevonden"
+
+#: templates/advanced_reports/backoffice/base.html:111
+msgid "Sign out"
+msgstr "Afmelden"
+
+#: templates/advanced_reports/backoffice/base.html:114
+#, python-format
+msgid "Hi, <strong>%(first_name)s</strong>"
+msgstr "Hallo, <strong>%(first_name)s</strong>"
+
+#: templates/advanced_reports/backoffice/base.html:139
+#, python-format
+msgid "Proudly powered by %(advreports_github_url)s"
+msgstr "Proudly powered by %(advreports_github_url)s"
+
+#: templates/advanced_reports/backoffice/login.html:10
+#: templates/advanced_reports/backoffice/login.html:35
+msgid "Sign in"
+msgstr "Aanmelden"
+
+#: templates/advanced_reports/backoffice/login.html:24
+msgid "Please sign in"
+msgstr "Gelieve aan te melden"
+
+#: templates/advanced_reports/backoffice/login.html:27
+msgid "Before continuing, we want you to authenticate yourself."
+msgstr "Vooraleer verder te gaan willen we dat je jezelf aanmeldt."
+
+#: templates/advanced_reports/backoffice/logout.html:9
+msgid "See you next time"
+msgstr "Tot ziens!"
+
+#: templates/advanced_reports/backoffice/logout.html:14
+msgid "Signed out"
+msgstr "Afgemeld"
+
+#: templates/advanced_reports/backoffice/logout.html:16
+msgid "Successfully signed out."
+msgstr "Afmelden geslaagd."
+
+#: templates/advanced_reports/backoffice/logout.html:19
+msgid "Click here to sign in again."
+msgstr "Klik hier om opnieuw aan te melden."
+
+#: templates/advanced_reports/backoffice/model.html:25
+msgid "Empty"
+msgstr "Leeg"
+
+#: templates/advanced_reports/backoffice/model.html:42
+msgid "Back to {{ model.parents[0].title }}"
+msgstr "Terug naar {{ model.parents[0].title }}"
+
+#: templates/advanced_reports/backoffice/search.html:8
+msgid "Search results for '{{ params.query }}'"
+msgstr "Zoekresultaten voor '{{ params.query }}'"
+
+#: templates/advanced_reports/backoffice/search.html:18
+msgid "Refine search"
+msgstr "Verfijn zoekopdracht"
+
+#: templates/advanced_reports/backoffice/search.html:23
+#: templates/advanced_reports/backoffice/search.html:24
+msgid "Show all"
+msgstr "Toon alles"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:7
+msgid "Page {{ search.page }} of {{ page_count }}"
+msgstr "Pagina {{ search.page }} van {{ page_count }}"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:33
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:51
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:71
+msgid "Cancel"
+msgstr "Annuleer"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:34
+msgid "Submit"
+msgstr "Verzend"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:47
+msgid "Are you sure?"
+msgstr "Ben je zeker?"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:68
+msgid "Are you sure you want to do this on multiple items?"
+msgstr "Ben je zeker dat je dit wil uitvoeren op meerdere onderdelen?"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:85
+msgid "Error"
+msgstr "Fout"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:89
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:105
+msgid "Close"
+msgstr "Sluit"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:124
+msgid "Filter"
+msgstr "Filter"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:133
+msgid "With selected:"
+msgstr "Met geselecteerd:"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:140
+msgid "Execute"
+msgstr "Voer uit"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:153
+msgid ""
+"Only {{ selected_count() }} selected. Select all {{ report.item_count }}?"
+msgstr ""
+"Slechts {{ selected_count() }} geselecteerd. Selecteer alle {{ report."
+"item_count }}?"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:154
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:155
+msgid "Yes"
+msgstr "Ja"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:156
+msgid "Clear selection"
+msgstr "Maak selectie ongedaan"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:180
+msgid "select"
+msgstr "selecteer"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:184
+msgid "hide details"
+msgstr "verberg details"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:185
+msgid "show details"
+msgstr "toon details"
+
+#: templates/advanced_reports/backoffice/contrib/advanced-reports/advanced-report.html:221
+#, python-format
+msgid "No %(items_name)s to show..."
+msgstr "Geen %(items_name)s om weer te geven..."
+
+#~ msgid "Su"
+#~ msgstr "Zo"
+
+#~ msgid "Mo"
+#~ msgstr "Ma"
+
+#~ msgid "Tu"
+#~ msgstr "Di"
+
+#~ msgid "We"
+#~ msgstr "Wo"
+
+#~ msgid "Th"
+#~ msgstr "Do"
+
+#~ msgid "Fr"
+#~ msgstr "Vr"
+
+#~ msgid "Sa"
+#~ msgstr "Za"
+
+#~ msgid "January"
+#~ msgstr "Januari"
+
+#~ msgid "February"
+#~ msgstr "Februari"
+
+#~ msgid "March"
+#~ msgstr "Maart"
+
+#~ msgid "April"
+#~ msgstr "April"
+
+#~ msgid "May"
+#~ msgstr "Mei"
+
+#~ msgid "June"
+#~ msgstr "Juni"
+
+#~ msgid "July"
+#~ msgstr "Juli"
+
+#~ msgid "August"
+#~ msgstr "Augustus"
+
+#~ msgid "September"
+#~ msgstr "September"
+
+#~ msgid "October"
+#~ msgstr "Oktober"
+
+#~ msgid "November"
+#~ msgstr "November"
+
+#~ msgid "December"
+#~ msgstr "December"
+
+#~ msgid "Confirm"
+#~ msgstr "Bevestigen"
+
+#~ msgid "Alert"
+#~ msgstr "Melding"
