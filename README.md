@@ -1,8 +1,10 @@
 Advanced Reports
 ================
 
-[![image](https://travis-ci.org/vikingco/django-advanced-reports.svg?branch=master)](https://travis-ci.org/vikingco/django-advanced-reports) [![wercker status](https://app.wercker.com/status/83e5295d0d44e6f64c714153a4538a02/s "wercker status")](https://app.wercker.com/project/bykey/83e5295d0d44e6f64c714153a4538a02) [![Circle CI](https://circleci.com/gh/vikingco/django-advanced-reports/tree/enh%2Fpolishing.svg?style=svg)](https://circleci.com/gh/vikingco/django-advanced-reports/tree/enh%2Fpolishing)
-[![Coverage Status](https://coveralls.io/repos/vikingco/django-advanced-reports/badge.svg?branch=enh%2Fpolishing)](https://coveralls.io/r/vikingco/django-advanced-reports?branch=enh%2Fpolishing)
+[![image](https://travis-ci.org/vikingco/django-advanced-reports.svg?branch=master)](https://travis-ci.org/vikingco/django-advanced-reports) 
+[![Circle CI](https://circleci.com/gh/vikingco/django-advanced-reports/tree/master.svg?style=svg)](https://circleci.com/gh/vikingco/django-advanced-reports/tree/master)
+[![Coverage Status](https://coveralls.io/repos/vikingco/django-advanced-reports/badge.svg?branch=master)](https://coveralls.io/r/vikingco/django-advanced-reports?branch=master) 
+[![Read The Docs](https://readthedocs.org/projects/django-advanced-reports/badge/?version=latest)](http://django-advanced-reports.readthedocs.org/en/latest/)
 
 [View demo website](http://backoffice.oemfoeland.com)
 
