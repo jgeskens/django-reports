@@ -9,12 +9,22 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
+from django.http.response import Http404
+from django.template.context import RequestContext
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
-from django.utils.html import strip_tags
+from django.utils.html import strip_tags, escape
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
+
+try:
+    from six import wraps
+except ImportError:
+    from functools import wraps
+
+import six
+
 from advanced_reports.backoffice.base import AutoSlug
 
 
@@ -26,136 +36,126 @@ class ActionType(object):
 
 class action(object):
     attrs_dict = None
+    creation_counter = 0
 
+    #: Required when not using the decorator. This is a string with the method name of your AdvancedReport subclass.
+    #: This method must accept an item instance. If you choose to use a form, it gets an item and a bound form.
+    #: If something goes wrong in your action, raise an ActionException with a message to display to the user.
     method = None
-    '''
-    Required. This is a string with the method name of your AdvancedReport subclass.
-    This method must accept an item instance. If you choose to use a form, it gets an item and a bound form.
-    If something goes wrong in your action, please raise an ActionException with a message to display to the user.
 
-    When your method name ends with _view, you can return a HttpResponse object. This is useful for redirecting
-    the user to another page or for download links, etc...
-    '''
-
+    #: Required. This is what the user will see in the frontend. If your action is simple (as in, it has no form), this
+    #: will be the name of the web link. If your action uses a form, this will be a title that will be placed before it.
+    #: If you don't want to display that, just use u''.
     verbose_name = None
-    '''
-    Required. This is what the user will see. If your action is simple (as in, it has no form), this
-    will be the name of the web link. If your action uses a form, this will be a title that will be placed before it.
-    If you don't want to display that, just use u''.
-    '''
 
+    #: Optional. This will be used as the success message when your action has successfully executed.
     success = None
-    '''
-    Optional. When you assign a string to this property it will be used as the success message when your action went
-    successfully.
-    '''
 
+    #: Optional. When filled in, a confirmation dialog will be displayed using this attribute as the prompt.
     confirm = None
-    '''
-    Optional. When you assign a string to this property, a confirm dialog will be displayed with your string as a message.
-    '''
 
+    #: Optional. When used together with a override of ``verify_action_group``, you can define on a per-item basis
+    #: which action will be shown or not. This is useful when your items have a certain state only allowing for
+    #: actions directly related to that state.
     group = None
-    '''
-    Optional. Give this a string with a group name so you can check your group against the verify_action_group method.
-    You have to implement the verify_action_group method and return True or False depending on the applicability of your
-    action to the group. If your item makes use of the states app, just make use of the state groups, it's really easy.
-    '''
 
+    #: Optional. A Django form class that should be used together with this action. Make sure your action method
+    #: has a signature like this: ``def my_action(self, item, form):``.
+    #:
+    #: Actions support the use of Django forms. When assigning a form class to this action, the behavior of actions
+    #: will be altered in the following ways:
+    #:
+    #:  * A form will be presented to the user, most likely in a pop-up (if ``form_via_ajax`` is True, this is the
+    #:    default when using the ``@action`` decorator version). The submit button of the form will have the
+    #:    ``submit`` attribute of this action as the caption.
+    #:  * When using a ModelForm, the current item instance (if available) will be used as the form's ``instance``.
+    #:    keyword argument.
+    #:  * Upon submission of this form, Advanced Reports will try to validate the form. If the form is not valid,
+    #:    the form errors are automatically displayed to the frontend, instead of executing the underlying action.
+    #:    If the form does pass the validation, the underlying action is called with the validated form as an extra
+    #:    argument. If you are using a ModelForm, you can just perform a ``form.save()`` in the action method body.
+    #:
     form = None
-    '''
-    Optional. Give this a form class and your action will be displayed as a form. If your form is a subclass of ModelForm,
-    the instance is automatically filled in for you. This way, it's easy to make some data editable in your report.
-    '''
 
+    #: Determines whether the action form should be shown as a pop-up dialog in the frontend or not.
+    #: The default value is False, but if you are using the ``@action`` decorator version, the default is True.
+    #: This strange default behavior is merely for backwards compatibility.
     form_via_ajax = False
-    '''
-    Optional. If True, the form will be shown in a popup.
-    '''
 
+    #: Determines whether the action form should be rendered at the time of the report items generation.
+    #: By default this is False, but inline action forms (when ``form_via_ajax`` is False) will always be
+    #: prefetched, as they are directly visible.
     prefetch_ajax_form = False
-    '''
-    Optional. If True, the form will be loaded together with the item. Actions where
-    form_via_ajax is True will be prefetched anyway.
-    '''
 
+    #: If True, the link behind the action will be loaded in a pop-up. This only works if the template
+    #: supports this. An alternative system for showing pop-ups is just returning the html for this pop-up
+    #: in the body of the action method. This is implemented in the AngularJS version.
     link_via_ajax = False
-    '''
-    Optional. If True, the link behind the action will be loaded via mbox.
-    '''
 
+    #: Required when using form. This is the value of your submit button when using forms.
     submit = u'Submit'
-    '''
-    Required when using form. This is the value of your submit button when using forms.
-    '''
 
+    #: Optional. If True, the submit button will be shown. The hiding of the submit button only works
+    #: when the template supports this.
     show_submit = True
-    '''
-    Optional. If True, the submit button will be shown.
-    '''
 
+    #: Optional. Only used when the template supports this.
     collapse_form = False
-    '''
-    Optional. If True, the form gets an "inline" css class, useful when you have some forms that must be very compact.
-    '''
 
+    #: If a template path is assigned to this attribute, this template will be rendered instead of the output
+    #: of {{ form }}. The template receives ``form`` and ``item`` as context variables.
     form_template = None
-    '''
-    Optional. Give this a template path to a template that gets the {{ form }} variable. This template will then be used
-    to display your form.
-    '''
 
+    #: Optional. If set, this instance will be used to pass to a ModelForm.
+    #: You can also supply a callable. The kwargs are: ``instance`` and optionally ``param``.
     form_instance = None
-    '''
-    Optional. If set, this instance will be used to pass to a ModelForm.
-    You can also supply a callable. The kwargs are: "instance" and optionally "param".
-    "param" will be supplied by the view "ajax_form".
-    '''
 
+    #: Optional. If True, when an action was executed successfully, the current row will be collapsed and the next row
+    #: will be expanded, and the first field of the first form gets the input focus.
     next_on_success = False
-    '''
-    Optional. If True, when an action was executed successfully, the current row will be collapsed and the next row will
-    be expanded, and the first field of the first form gets the input focus. This way you can create a report that acts
-    like the "Sims requested" page.
-    '''
 
+    #: Makes the action invisible. If you want to use this action somewhere else, you can use the
+    #: {% url 'advanced_reports_action' report_slug action_method item_id %} to execute the action.
     hidden = False
-    '''
-    Optional. If True, your action will not be displayed on the report. Use this when you want to move your action link
-    to another place. Use the css class "action-link" and do a {% url 'advanced_reports_action' my_slug my_action_method, my item id %}.
-    Also use this when defining a view action for your lazy divs.
-    '''
 
+    #: Optional. A custom css class for this action.
     css_class = None
-    '''
-    Optional. This is how you can give some actions a special color, for example red when it does something destructive.
-    '''
 
+    #: Whether the action is shown on individual items. It could be that an action is only designed to work on
+    #: a bulk items. When setting to False, you remove them from the individual items.
     individual_display = True
-    '''
-    Show the action in the list of individual items. Only applicable to simple actions (without a form).
-    '''
 
+    #: Enable the use of actions than can execute on multiple items.
+    #: If you want to implement bulk methods operating directly on a list or queryset (if applicable), you
+    #: can implement an extra ``def FOO_multiple(self, items, form=None):`` where FOO is the method name of your
+    #: action. If not, it will just loop through your items and execute your action on each item one after another.
     multiple_display = True
-    '''
-    Show the action in the list of multiple items. Only applicable to simple actions (without a form).
-    '''
 
+    #: If the form of the action has a file upload, set this to True. Then the enctype="multipart/form-data"
+    #: will be added to the ``<form>`` tag.
     has_file_upload = False
-    '''
-    If the form of the action has a file upload, set it to true. enctype='multipart/form-data' will be added to the form.
-    '''
 
+    #: Optional. The permission required for this action.
     permission = None
-    '''
-    Optional. The permission required for this action.
-    '''
 
+    #: Whether the action method acts like a regular Django view.
+    regular_view = False
 
-    def __init__(self, **kwargs):
-        '''
+    #: Whether the action is defined by the new style method (as a decorator) or not.
+    #: The advantage is that new cool stuff that should not be backwards compatible can be enabled when this
+    #: attributes is True.
+    is_new_style = False
+
+    def __init__(self, title=None, **kwargs):
+        """
         Each kwarg maps to a property above. For documentation, refer to the individual property documentation strings.
-        '''
+        """
+        action.creation_counter += 1
+        self.creation_counter = action.creation_counter
+
+        if title:
+            kwargs['verbose_name'] = title
+
         self.attrs_dict = {}
         for k in kwargs.keys():
             setattr(self, k, kwargs[k])
@@ -193,17 +193,78 @@ class action(object):
         return self.success or _(u'Successfully executed "%s"') % self.verbose_name
 
     def get_form_instance(self, instance, *args, **kwargs):
+        if not instance:
+            return None
+        if self.form and not issubclass(self.form, forms.ModelForm):
+            return None
+
         if 'param' in kwargs and not kwargs['param']:
             kwargs.pop('param')
-        
+
         if self.form_instance:
             return self.form_instance(instance, *args, **kwargs) \
                 if callable(self.form_instance) \
                 else self.form_instance
         return instance
 
+    def get_bound_form(self, request, instance, prefix):
+        if self.form is None:
+            return None
+        kwargs = {}
+        instance = self.get_form_instance(instance)
+        if instance:
+            kwargs['instance'] = instance
+        if request.method == 'GET':
+            return self.form(request.GET, prefix=prefix, **kwargs)
+        return self.form(request.POST, request.FILES, prefix=prefix, **kwargs)
+
+    def render_form(self, request, instance, form):
+        if self.form_template:
+            return render_to_string(self.form_template,
+                                    {'form': form, 'item': instance},
+                                    context_instance=RequestContext(request))
+        return six.text_type(form)
+
+    @property
+    def is_regular_view(self):
+        return self.regular_view or self.method.endswith('_view')
+
     def is_allowed(self, request):
         return not self.permission or request.user.has_perm(self.permission)
+
+    def __call__(self, function=None):
+        """
+        Allows this action to be used as a decorator. Example::
+
+            class MyReport(AdvancedReport):
+                model = User
+
+                @action('Edit user', form=UserForm)
+                def edit(self, user, form):
+                    form.save()
+        """
+
+        # This dark magic is needed for Django's dirty template code.
+        if function is None:
+            return self
+
+        # Now that we are using a new style of calling this action, we can safely use
+        # a new set of defaults :-)
+        if self.form:
+            if not 'form_via_ajax' in self.attrs_dict:
+                self.form_via_ajax = True
+                self.attrs_dict['form_via_ajax'] = True
+        self.is_new_style = True
+        self.attrs_dict['is_new_style'] = True
+
+        self.method = function.__name__
+        self.attrs_dict['method'] = self.method
+
+        @wraps(function)
+        def decorator(*args, **kwargs):
+            return function(*args, **kwargs)
+        decorator.action = self
+        return decorator
 
 
 class ActionException:
@@ -213,208 +274,147 @@ class ActionException:
             for k in form.errors.keys():
                 for e in form.errors[k]:
                     msg += u' ' + e
-            self.msg = e
+            self.msg = msg
         else:
             self.msg = u'%s' % msg
 
 
 class AdvancedReport(object):
+    #: Required. A unique url-friendly name for your Advanced Report
     slug = AutoSlug(remove_suffix='Report')
-    '''
-    Required. A unique url-friendly name for your Advanced Report
-    '''
 
+    #: The request. A new ``AdvancedReport`` instance is created on each request. This request will be saved to this
+    #: property, so you can access it anywhere you need it.
     request = None
-    '''
-    Optional. The request
-    '''
 
+    #: Optional when ``model`` or ``models`` is specified. A list of fields that must be displayed on the report.
     fields = None
-    '''
-    Required. The fields that are included in your Advanced Report as a tuple of strings.
-    When "models" is specified, it takes some values like the verbose_name from your model.
 
-    By default, a lookup will be performed on your items but you can implement the get_FOO_html
-    methods to override the output.
+    #: A list of sortable fields.
+    #: You can sort on multiple fields at the same time using the comma (,) separator.
+    #: The __ lookup syntax is also supported.
+    sortable_fields = None
 
-    field__value__subvalue notation is also supported, but it is recommended to implement that
-    in the get_FOO_html method.
-    '''
+    #: A list of fields that are searchable. When specified or inferred from a given model
+    search_fields = None
 
-    sortable_fields = ()
-    '''
-    Optional. A tuple of fields that are sortable. __ notation is supported and you can sort on
-    multiple fields a the same time by using the comma (,) separator. Only model fields can be
-    sorted. Make sure to add your model to the "models" property.
-    '''
-
-    search_fields = ()
-    '''
-    Optional. A tuple of fields that can be searched.
-    '''
-
+    #: A list of fields that can be filtered.
     filter_fields = ()
-    '''
-    Optional. A tuple of fields that can be filtered.
-    '''
 
+    #: Optional. A dictionary with fields that will be shown as tabs. 1st dict field has to be the field to filter on.
+    #: 2nd dict field is a dict with options:
+    #:     - ``types``: types to filter on.
+    #:     - ``images`` (optional): `default` will be used for all other fields, use same name as defined in `types` to
+    #:        provide a `type` specific image.
     tabbed_filter_fields = ()
-    '''
-    Optional. A dictionary with fields that will be shown as tabs. 1st dict field has to be the field to filter on.
-    2nd dict field is a dict with a options:
-        - `types`: types to filter on.
-        - `images` (optional): `default` will be used for all other fields, use same name as defined in `types` to
-        provide a `type` specific image.
-    '''
 
+    #: Optional. A mapping of filter fields to their list of values.
     filter_values = {}
-    '''
-    Optional. A mapping of filter fields to their list of values.
-    '''
 
+    #: Deprecated. A tuple of available actions for your report. Please use the actions as a decorator instead.
     item_actions = ()
-    '''
-    Optional. A tuple of available actions for your report.
-    See the documentation for the action class above.
-    '''
 
+    #: Required if no model specified. A name for an individual item. For example ``_('user')``
     verbose_name = None
-    '''
-    Required. A name for an individual item. For example _(u'user')
-    '''
 
+    #: Required if no model specified. A plural name for individual items. For example ``_('users')``
     verbose_name_plural = None
-    '''
-    Required. A plural name for some individual items. For example _(u'users')
-    '''
 
+    #: Required if no model specified. The human-friendly title of your report.
     title = None
-    '''
-    Required. The title of your report. This will be displayed at the top of your report page.
-    '''
 
+    #: Optional. Some text to explain the purpose of the report and some extra info.
     help_text = None
-    '''
-    Optional. Some text to explain the purpose of the report and some extra info.
-    '''
 
+    #: Optional, but strongly advised to use it. A model class. An ``AdvancedReport`` can infer a lot of stuff
+    #: from your model, including but not limited to the field verbose names, sortable fields, ...
+    #: This is a shortcut to the ``models`` attribute.
+    model = None
+
+    #: Optional, and not needed if ``model`` is specified. A tuple of model classes. See the documentation
+    #: for the ``model`` attribute.
     models = None
-    '''
-    Optional, but strongly advisable to use it. A tuple of model classes. This is merely for
-    extra metadata and checking if some of your fields are real model fields.
-    '''
 
+    #: The maximum number of items shown on one page. When you have more than this number
+    #: of items, your report will be paginated. By default this is 20.
     items_per_page = 20
-    '''
-    Optional. The maximum number of items shown on one page. When you have more than this number
-    of items, your report will be paginated.
-    '''
 
+
+    #: Optional. A tuple of link tuples. You can define some top level links for your report.
+    #: A link tuple must contain two items, the name of the link and the href location.
+    #: Optionally you can show some more information if you add a third item to the link tuple with
+    #: a short explanation. This will be shown next or below the button, or a tooltip, as the templates can vary.
+    #: Example::
+    #:
+    #:     links = (
+    #:         (u'Print this page', 'javascript:printPage();', u'Click here to print this page'),
+    #:         (u'Refresh', '.'),
+    #:     )
     links = ()
-    '''
-    Optional. A tuple of link tuples. You can define some top level links for your report.
-    Example:
-    links = (
-        (u'Print this page', 'javascript:printPage();', u'Click here to print this page'),
-        (u'Refresh', '.'),
-    )
 
-    As you can see, the third item of your link tuple is optional and can contain some help text.
-
-    Advanced Reports has a nice little feature to let you export CSV files from your reports.
-    Just add this link tuple:
-    (u'Download CSV', '?csv')
-    '''
-
+    #: The default global template for rendering a report. This is only used when using the server-side
+    #: Django view-based version.
     template = 'advanced_reports/default.html'
-    '''
-    Optional. Override this to use your own template for your report.
-    '''
 
+    #: The default item template. This template will be used to render an individual item.
+    #: When an action performs an operation on a report item, this template will be used to re-render that
+    #: particular item.
     item_template = 'advanced_reports/item_row.html'
-    '''
-    Optional. Override this to specify the item template. This is required when your normal template
-    uses a custom view for items. Make sure to base it off the original and please keep the "action-row".
-    '''
 
+    #: This template is used when you want your view-based report to be shown in the middle of an existing page.
     internal_template = ''
-    '''
-    Optional. Override this to specify the internal template. This is required when your normal template
-    uses a custom template for items. Make sure to base it off the original and please keep the "action-row".
-    '''
 
+    #: Required when using get_decorator. True indicates that Advanced Reports should use the implementation
+    #: of the ``get_decorator`` method.
     decorate_views = False
-    '''
-    Required when using get_decorator. True indicates that Advanced Reports should use your implementation
-    of the get_decorator method.
-    This is needed because due to a special implementation from Jonathan Slenders we cannot try the get_decorator
-    function before we really know if it is implemented.
-    '''
 
+    #: Optional. Puts checkboxes before each item and puts a combobox with group actions on your report.
+    #: Only simple (as in, not using a form) actions can be performed on multiple items.
+    #:
+    #: You can implement your own special action method for multiple items. See the documenation for
+    #: FOO_multiple below.
     multiple_actions = False
-    '''
-    Optional. Puts checkboxes before each item and puts a combobox with group actions on your report.
-    Only simple (as in, not using a form) actions can be performed on multiple items.
 
-    You can implement your own special action method for multiple items. See the documenation for
-    FOO_multiple below.
-    '''
-
+    #: Optional. Use this if you have a custom urlname for your report. Advanced Reports then knows how to
+    #: reach your report.
     urlname = None
-    '''
-    Optional. Use this if you have a custom urlname for your report. Advanced Reports then knows how to
-    reach your report.
-    '''
 
+    #: Optional. If a date field name is assigned to this, you can filter on date ranges.
     date_range = None
-    '''
-    Optional. If a date field name is assigned to this, you can filter on date ranges. Made by Maarten, Thanks!
-    '''
 
+    #: Optional. True allows animation, but that does not work with table rows.
     animation = False
-    '''
-    Optional. True allows animation, but that does not work with table rows.
-    '''
 
+    #: Optional. The text displayed when no items are shown on your report. By default this is:
+    #: There are no <verbose_name_plural> to display.
     empty_text = None
-    '''
-    Optional. The text displayed when no items are shown on your report. By default this is:
-    There are no <your_verbose_name_plural> to display.
-    '''
 
+    #: Controls the visibility of the table header.
     header_visible = True
-    '''
-    Controls the visibility of the table header.
-    '''
 
+    #: Controls the visibility of the report header
     report_header_visible = True
-    '''
-    Controls the visibility of the report header
-    '''
 
+    #: Shows the separator between actions.
     show_actions_separator = True
-    '''
-    Shows the separator between actions.
-    '''
 
+    #: How to display the actions.
     action_list_type = ActionType.LINKS
-    '''
-    Show the actions as LINKS or BUTTONS.
-    '''
 
+    #: Show the actions of an item only when the user hovers over the item.
+    #: This only works when your template or report rendering implementation knows about this attribute.
     show_actions_only_on_hover = True
-    '''
-    Show the actions of an item only when the user hovers over the item
-    '''
 
+    #: Determines if the advanced report should display a only single items. Used when you want to display
+    #: to report in an other template
     internal_mode = False
-    '''
-    Determines if the advanced report should display a only single items. Used when you want to display
-    to report in an other template
-    '''
 
     def __init__(self, *args, **kwargs):
         self.model_admin = None
+
+        # Expand some shortcuts
+        if not self.models and self.model:
+            self.models = (self.model,)
 
         # Add defaults from the model meta
         if self.models:
@@ -428,22 +428,45 @@ class AdvancedReport(object):
 
             # Add defaults from the model admin
             model_admin = admin.site._registry.get(model)
+
             if model_admin:
                 self.model_admin = model_admin
+
                 if self.fields is None and model_admin.list_display:
                     self.fields = model_admin.list_display
-                if not self.search_fields and model_admin.search_fields:
+
+                if self.search_fields is None and model_admin.search_fields:
                     self.search_fields = model_admin.search_fields
-                if not self.sortable_fields and model_admin.list_display:
+
+                if self.sortable_fields is None and model_admin.list_display:
                     self.sortable_fields = model_admin.list_display
 
+        # Some sane defaults
+        if not self.fields:
+            self.fields = ()
+        if not self.search_fields:
+            self.search_fields = ()
+        if not self.sortable_fields:
+            self.sortable_fields = ()
 
+        # Expand item_actions with the decorated versions
+        item_actions = list(self.item_actions)
+        for method_name in dir(self):
+            if not hasattr(AdvancedReport, method_name):
+                method = getattr(self, method_name)
+
+                if callable(method) and hasattr(method, 'action'):
+                    item_actions.append(method.action)
+
+        item_actions.sort(key=lambda a: a.creation_counter)
+        self.item_actions = item_actions
 
     def queryset(self):
-        '''
-        You must implement this function as this is the primary source of the data you will
-        want to manage.
-        '''
+        """
+        The primary source of the data you will want to manage.
+        """
+        if self.models:
+            return self.models[0].objects.all()
         return None
 
     def get_FOO_verbose_name(self):
@@ -568,23 +591,23 @@ class AdvancedReport(object):
         Implement this to get some extra information about an item.
         This will be shown right below a data row and above the actions.
 
-        = Ajax loading of information =
+        Ajax loading of information
 
         You can specify some "lazy divs" that are only loaded when an action row expands.
         You must define a hidden item action with a method name that ends with '_view'.
 
-        Example:
+        Example::
 
-        def get_extra_information(self, item):
-            return u'<div class="lazy" data-method="credit_view"></div>'
+            def get_extra_information(self, item):
+                return u'<div class="lazy" data-method="credit_view"></div>'
 
-        item_actions = (
-            action(method='credit_view', verbose_name=u'', group='mygroup', hidden=True),
-        )
+            item_actions = (
+                action(method='credit_view', verbose_name=u'', group='mygroup', hidden=True),
+            )
 
-        def credit_view(self, item):
-            balance = get_credit_balance(item)
-            return render_to_response('credit_template.html', {'balance': balance})
+            def credit_view(self, item):
+                balance = get_credit_balance(item)
+                return render_to_response('credit_template.html', {'balance': balance})
 
         '''
         return u''
@@ -693,7 +716,8 @@ class AdvancedReport(object):
 
     def get_tabbed_filter_links(self):
         """
-        Example:
+        Example::
+
             configured in report:
 
                 tabbed_filter_fields = (
@@ -718,7 +742,7 @@ class AdvancedReport(object):
                     ],
                 ]
 
-        @return a dict for links with optional images.
+        :return: a dict for links with optional images.
         """
         report = self
         result = OrderedDict()
@@ -742,9 +766,15 @@ class AdvancedReport(object):
         return result.iteritems()
 
     def get_filters_from_request(self, request):
+        """
+        Return a dict used as argument to Model.objects.filter() function.
+        But we need to be sure that we can filter on these fields so we check if there is no filter_* function defined
+        in advanced report devinition
+        """
         result = {}
         for filter_field in self.filter_fields:
-            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip():
+            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip() and \
+                    not hasattr(self, 'filter_%s' % filter_field):
                 result[filter_field] = request.REQUEST[filter_field]
         return result
 
@@ -757,32 +787,29 @@ class AdvancedReport(object):
         # Extract parameters
         q = params['q'].lower() if 'q' in params else None
         exact = 'exact' in params
-        from_date = params.get('from', '')
-        to_date = params.get('to', '')
-        from_date_struct = time.strptime(params['from'], '%Y-%m-%d') if from_date else None
-        to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
         filters_from_request = self.get_filters_from_request(request)
 
-        if filters_from_request:
+        if hasattr(queryset, 'filter') and filters_from_request:
             queryset = queryset.filter(**filters_from_request)
 
-        if from_date_struct and to_date_struct:
+        if params.get('from', '') or params.get('to', ''):
             date_range_query = Q()
 
-            # Filtering on date range
+            if params.get('from', ''):
+                from_date_struct = time.strptime(params['from'], '%Y-%m-%d')
+                from_date = datetime.datetime(year=from_date_struct.tm_year,
+                                              month=from_date_struct.tm_mon,
+                                              day=from_date_struct.tm_mday)
+            if params.get('to', ''):
+                to_date_struct = time.strptime(params['to'], '%Y-%m-%d')
+                to_date = datetime.datetime(year=to_date_struct.tm_year,
+                                            month=to_date_struct.tm_mon,
+                                            day=to_date_struct.tm_mday)
+                # Date range has no hour so we add 1 day to the to_date so that we get the results of that day as well
+                # eg: if we selected from: 2011-01-17 and to: 2011-01-18, then the actual date range will be:
+                # between 2011-01-17 00:00 and 2011-01-19 00:00
+                to_date += datetime.timedelta(days=1)
 
-            from_date = datetime.datetime(year=from_date_struct.tm_year,
-                                          month=from_date_struct.tm_mon,
-                                          day=from_date_struct.tm_mday)
-            to_date = datetime.datetime(year=to_date_struct.tm_year,
-                                        month=to_date_struct.tm_mon,
-                                        day=to_date_struct.tm_mday)
-
-            # Date range has no hour so we add 1 day to the to_date so that we get the results of that day aswell
-            # eg: if we selected from: 2011-01-17 and to: 2011-01-18, then the actual date rangewill be:
-            # between 2011-01-17 00:00 and 2011-01-19 00:00
-
-            to_date += datetime.timedelta(days=1)
             uses_model = False
 
             field = self.get_model_field(self.date_range.split('__')[0])
@@ -791,9 +818,16 @@ class AdvancedReport(object):
                 fake_fields.append(self.date_range)
             else:
                 uses_model = True
+
+        if uses_model:
+            if params.get('from', '') and params.get('to', ''):
                 date_range_query = Q(**{'%s__range' % self.date_range: (from_date, to_date)})
 
-            queryset = queryset.filter(date_range_query)
+                queryset = queryset.filter(date_range_query)
+            elif params.get('from', ''):
+                queryset = queryset.filter(Q(**{'%s__gte' % self.date_range: from_date}))
+            elif params.get('to', ''):
+                queryset = queryset.filter(Q(**{'%s__lt' % self.date_range: to_date}))
 
         if q:
             if uses_model is None:
@@ -1063,12 +1097,12 @@ class AdvancedReport(object):
         Use this if you have a lot of lookups of this kind when generating the report.
 
         Parameters:
-        - items: a iterable of items where we want to attach the backwards relation object.
-        - our_model: the type of items where the generic foreign key points to.
-        - foreign_model: the type of items that have a generic foreign relation to our_model.
-        - attr_name: specifies name of the attribute that will contain an instance of foreign_model.
-        - fallback: a function that will be called when the backwards relation was not found.
-          It must accept a our_model instance and must return a foreign_model instance.
+            - items: a iterable of items where we want to attach the backwards relation object.
+            - our_model: the type of items where the generic foreign key points to.
+            - foreign_model: the type of items that have a generic foreign relation to our_model.
+            - attr_name: specifies name of the attribute that will contain an instance of foreign_model.
+            - fallback: a function that will be called when the backwards relation was not found.
+              It must accept a our_model instance and must return a foreign_model instance.
         '''
         ct = ContentType.objects.get_for_model(our_model)
         pks = [item.pk for item in items]
@@ -1087,16 +1121,16 @@ class AdvancedReport(object):
         For instance, you can add subscription lists to each user using only one line of code.
 
         Parameters:
-        - items: a iterable of items where we want to attach the backwards relation object.
-        - foreign_model: the type of items that have a foreign relation to our_model.
-        - field_name: the field name of foreign_model that points to our_model.
-        - related_name: specifies name of the attribute that will contain (a list of)
-          instances of foreign_model.
-        - our_index: a callable that gets the id of an instance of our_model.
-        - our_foreign_index: a callable that gets the id of our instance from foreign_model.
-        - select_related: performs a select_related on the query on foreign_model.
-        - many: if set to False, a single item will be assigned instead of a list. When
-          the list is empty, None will be assigned.
+            - items: a iterable of items where we want to attach the backwards relation object.
+            - foreign_model: the type of items that have a foreign relation to our_model.
+            - field_name: the field name of foreign_model that points to our_model.
+            - related_name: specifies name of the attribute that will contain (a list of)
+              instances of foreign_model.
+            - our_index: a callable that gets the id of an instance of our_model.
+            - our_foreign_index: a callable that gets the id of our instance from foreign_model.
+            - select_related: performs a select_related on the query on foreign_model.
+            - many: if set to False, a single item will be assigned instead of a list. When
+              the list is empty, None will be assigned.
         '''
 
         our_index = our_index or (lambda i: i.pk)
@@ -1143,12 +1177,21 @@ class AdvancedReport(object):
 
         return actions
 
-    def find_object_action(self, object, method):
+    def find_object_action(self, object, method, request=None):
+        found_action = None
         for a in self.item_actions:
-            if self.verify_action_group(object, a.group):
+            if object is None or self.verify_action_group(object, a.group):
                 if a.method == method:
-                    return a
-        return None
+                    found_action = a
+                    break
+
+        if request is not None:
+            if found_action is None:
+                raise Http404(_(u'Unsupported action method "%s".' % method))
+            if not found_action.is_allowed(request):
+                raise Http404(_(u'You\'re not allowed to execute "%s".' % method))
+
+        return found_action
 
     def find_action(self, method):
         for a in self.item_actions:
@@ -1235,3 +1278,6 @@ class Resolver(object):
 class BootstrapReport(AdvancedReport):
     template = 'advanced_reports/bootstrap/report.html'
     item_template = 'advanced_reports/bootstrap/item.html'
+
+    def get_html_for_value(self, value):
+        return escape(six.text_type(value))

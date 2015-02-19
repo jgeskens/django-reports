@@ -876,6 +876,12 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
     #: to do) and put your own template here.
     model_template = 'advanced_reports/backoffice/model-base.html'
 
+    #: The template file that will be used to show the login form.
+    login_template = 'advanced_reports/backoffice/login.html'
+
+    #: The template file that will be used as the logout confirmation page.
+    logout_template = 'advanced_reports/backoffice/logout.html'
+
     def __init__(self, name='backoffice', app_name='backoffice'):
         """
         Constructor for a BackOfficeBase implementation.
@@ -947,7 +953,7 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
         extra context.
         """
         from django.contrib.auth.views import logout
-        kwargs['template_name'] = 'advanced_reports/backoffice/logout.html'
+        kwargs['template_name'] = self.logout_template
         kwargs['extra_context'] = self.default_context()
         return logout(request, *args, **kwargs)
 

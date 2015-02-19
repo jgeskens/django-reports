@@ -2,8 +2,8 @@ general:
     build_dir: advreport_test_project
 test:
     override:
-        - cd ..; python setup.py develop; cd -
-        - cd ..; python advreport_test_project/manage.py test; cd -
+        - cd ..; python setup.py develop
+        - cd ..; python advreport_test_project/manage.py test
 deployment:
     polishing:
         branch: enh/polishing

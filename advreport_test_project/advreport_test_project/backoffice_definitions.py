@@ -6,7 +6,7 @@ import advanced_reports
 from advanced_reports.backoffice.base import BackOfficeBase
 from advanced_reports.backoffice.contrib.views import AdvancedReportView, AdvancedReportActionView
 from advanced_reports.backoffice.examples.backoffice import UserModel, UserView
-from advanced_reports.backoffice.examples.reports import NoModelReport, UserReport
+from advanced_reports.backoffice.examples.reports import NoModelReport, UserReport, NewStyleReport
 from advanced_reports.backoffice.examples.views import SimpleView
 from advreport_examples.views import ExampleIncludePythonView, ExampleIncludeTemplateView
 from oemfoe_todos_app.backoffice.definitions import TodoListModel, TodoItemModel, TodoListsView
@@ -49,3 +49,4 @@ todos_backoffice.register_view(ExampleIncludePythonView)
 
 advanced_reports.register(NoModelReport)
 advanced_reports.register(UserReport)
+advanced_reports.register(NewStyleReport)

@@ -82,6 +82,8 @@ class AdvancedReportView(BackOfficeView):
                 if action.form:
                     form = action.form(request.POST, prefix='actionform')
                     if form.is_valid():
+                        if action.is_regular_view and request.is_ajax():
+                            return {'link_action': {'method': method, 'data': request.POST}}
                         response = getattr(advreport, '%s_multiple' % method)(items, form)
                     else:
                         if action.form_template:
