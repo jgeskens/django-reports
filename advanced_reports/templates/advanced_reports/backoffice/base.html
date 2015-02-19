@@ -134,11 +134,13 @@
         {% endblock %}
 
         <footer>
+            {% block footer %}
             <div class="container">
                 {% with '<a href="https://github.com/vikingco/django-advanced-reports">Advanced Reports</a>' as advreports_github_url %}
                     {% blocktrans %}Proudly powered by {{ advreports_github_url }}{% endblocktrans %}
                 {% endwith %}
             </div>
+            {% endblock %}
         </footer>
 
         <!-- Bootstrap core JavaScript
