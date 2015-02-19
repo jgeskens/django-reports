@@ -766,7 +766,7 @@ class AdvancedReport(object):
         to_date_struct = time.strptime(params['to'], '%Y-%m-%d') if to_date else None
         filters_from_request = self.get_filters_from_request(request)
 
-        if filters_from_request:
+        if hasattr(queryset, 'filter') and filters_from_request:
             queryset = queryset.filter(**filters_from_request)
 
         if from_date_struct and to_date_struct:
