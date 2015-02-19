@@ -26,4 +26,10 @@ setup(
         'Environment :: Web Environment',
         'Framework :: Django',
     ],
+    install_requires=[
+        'Django',
+        'six',
+        'django-widget-tweaks',
+        'pygments',
+    ]
 )

@@ -10,13 +10,12 @@ from django.utils.html import strip_entities, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
 
-from django_ajax.pagination import paginate
 import six
 
-from advanced_reports.backoffice.api_utils import JSONResponse
-from advanced_reports.decorators import conditional_delegation, report_view
-from advanced_reports.defaults import ActionException, Resolver
-
+from .backoffice.api_utils import JSONResponse
+from .decorators import conditional_delegation, report_view
+from .defaults import ActionException, Resolver
+from .utils import paginate
 
 def _get_redirect(advreport, next=None, querystring=None):
     if next:
@@ -106,7 +105,7 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
         return response
 
     # Paginate
-    paginated = paginate(request, object_list, num_per_page=advreport.items_per_page, use_get_parameters=True)
+    paginated = paginate(request, object_list, advreport.items_per_page)
 
     # Extra context?
     context.update(advreport._extra_context(request))
@@ -308,7 +307,7 @@ def _is_allowed_multiple_action(request, advreport, action):
 def api_list(request, advreport, ids=None):
     object_list, extra_context = advreport.get_object_list(request, ids=ids)
 
-    paginated = paginate(request, object_list, num_per_page=advreport.items_per_page, use_get_parameters=True)
+    paginated = paginate(request, object_list, advreport.items_per_page)
 
     report = {
         'header': advreport.column_headers,

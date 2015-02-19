@@ -8,6 +8,7 @@ from pygments.lexers.templates import HtmlDjangoLexer
 from pygments.formatters.html import HtmlFormatter
 import inspect
 
+
 class ExampleIncludeTemplateView(BackOfficeView):
     template = 'advanced_reports/backoffice/views/exampleinclude.html'
 

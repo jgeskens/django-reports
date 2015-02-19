@@ -1,4 +1,5 @@
 # Django settings for advreport_test_project project.
+import importlib
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -113,7 +114,7 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -129,11 +130,24 @@ INSTALLED_APPS = (
     'advanced_reports',
     'advanced_reports.backoffice',
     'widget_tweaks',
+]
+
+# Optional Django Apps for the test project
+OPTIONAL_INSTALLED_APPS = [
     'django_ajax',
     'django_template_tags',
     'djprogress',
     'django_extensions',
-)
+]
+
+for optional_app in OPTIONAL_INSTALLED_APPS:
+    try:
+        importlib.import_module(optional_app)
+    except ImportError:
+        pass
+    else:
+        INSTALLED_APPS.append(optional_app)
+
 
 SESSION_SERIALIZER = 'django.contrib.sessions.serializers.JSONSerializer'
 
