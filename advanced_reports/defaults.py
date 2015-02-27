@@ -153,7 +153,7 @@ class action(object):
         action.creation_counter += 1
         self.creation_counter = action.creation_counter
 
-        if title:
+        if title is not None:
             kwargs['verbose_name'] = title
 
         self.attrs_dict = {}
