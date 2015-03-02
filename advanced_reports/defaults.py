@@ -153,7 +153,7 @@ class action(object):
         action.creation_counter += 1
         self.creation_counter = action.creation_counter
 
-        if title:
+        if title is not None:
             kwargs['verbose_name'] = title
 
         self.attrs_dict = {}
@@ -905,7 +905,7 @@ class AdvancedReport(object):
             return self.queryset()
 
     def get_sorted_queryset(self, by_field, request=None):
-        if by_field != '__str__':
+        if by_field not in ('__str__', '__unicode__'):
             field_name = by_field.split('__')[0].split(',')[0]
             field_name = field_name[1:] if field_name[0] == '-' else field_name
         else:

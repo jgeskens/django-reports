@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save, post_delete
 from django.http import Http404, HttpResponse
+from django.http.response import HttpResponseForbidden
 from django.shortcuts import render_to_response, get_object_or_404, redirect, render
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
@@ -76,7 +77,7 @@ class BackOfficeTab(object):
         the current model instance.
     """
 
-    slug = AutoSlug(remove_suffix='Tab')
+    slug = None
     title = None
     template = None
     permission = None
@@ -668,6 +669,13 @@ class SearchMixin(object):
         q = request.view_params.get('q')
         return self.search(request, q, page_size=10, filter_on_model_slug=filter_model,
                            include_counts=False)
+
+    def api_get_reindex(self, request):
+        if request.user.is_authenticated():
+            if request.user.is_superuser:
+                self.reindex_all_models()
+                return JSONResponse('OK')
+        return HttpResponseForbidden('Forbidden')
 
 
 class BackOfficeView(object):

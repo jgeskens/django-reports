@@ -1,0 +1,23 @@
+.. :changelog:
+
+History
+-------
+
+0.9.2 (2015-02-20)
+++++++++++++++++++
+
+* First release on PyPI.
+
+0.9.3 (2015-02-27)
+++++++++++++++++++
+
+* Add api for reindexing the search index
+* Small bugfixes related to sorting querysets in reports
+* Extra unit tests for report sorting
+* Remove redundant AutoSlug for BackOfficeTab
+
+0.9.4 (2015-02-27)
+++++++++++++++++++
+
+* Fix issue where the translation system could be triggered too soon
+
