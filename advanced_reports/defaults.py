@@ -141,6 +141,11 @@ class action(object):
     #: Whether the action method acts like a regular Django view.
     regular_view = False
 
+    #: Whether the action is report-wide or not. Report-wide actions methods do not
+    #: receive an argument containing the item. Only a form will be given if applicable.
+    #: Report-wide actions are ideal for adding new items or links to another web page.
+    is_report_action = False
+
     #: Whether the action is defined by the new style method (as a decorator) or not.
     #: The advantage is that new cool stuff that should not be backwards compatible can be enabled when this
     #: attributes is True.
@@ -155,6 +160,10 @@ class action(object):
 
         if title is not None:
             kwargs['verbose_name'] = title
+
+        if kwargs.get('is_report_action', False):
+            kwargs['individual_display'] = False
+            kwargs['multiple_display'] = False
 
         self.attrs_dict = {}
         for k in kwargs.keys():
@@ -176,7 +185,7 @@ class action(object):
                 new_action.form = self.form(data=data, prefix=prefix)
 
         if new_action.form is not None:
-            new_action.form_template = self.form_template # mark_safe(render_to_string(self.form_template, {'form': new_action.form}))
+            new_action.form_template = self.form_template
             if self.form_template:
                 new_action.response_form_template = mark_safe(render_to_string(self.form_template, {'form': new_action.form, 'item': instance}))
 

@@ -4,6 +4,7 @@ from django import forms
 from django.http.response import HttpResponse
 from django.template.defaultfilters import yesno
 from django.utils.html import escape
+import six
 
 from advanced_reports.backoffice.shortcuts import action
 from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
@@ -132,3 +133,9 @@ class NewStyleReport(BootstrapReport):
     @action('Edit user', form=UserForm)
     def edit(self, item, form):
         form.save()
+
+    @action('Enter factor', form=SumForm, is_report_action=True)
+    def factor(self, form):
+        if form.cleaned_data['factor'] == 2:
+            raise ActionException("I don't like factor two :-(")
+        return 'The given factor was: %d' % form.cleaned_data['factor']

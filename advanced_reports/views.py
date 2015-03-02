@@ -329,6 +329,7 @@ def api_list(request, advreport, ids=None):
             for a in advreport.item_actions \
             if _is_allowed_multiple_action(request, advreport, a)
         ],
+        'report_action_list': [_action_dict(request, None, a) for a in advreport.item_actions if a.is_report_action]
     }
     return JSONResponse(report)
 
@@ -350,7 +351,11 @@ def api_action(request, advreport, method, object_id=None):
     obj = object_id and advreport.get_item_for_id(object_id)
     advreport.enrich_object(obj, request=request)
     a = advreport.find_object_action(obj, method, request)
-    action_args = [obj]
+    action_args = []
+
+    # Unless the action is a report-wide action, always add the obj argument.
+    if not a.is_report_action:
+        action_args.append(obj)
 
     # Start with an empty reply. We will fill this in according to the different situations.
     reply = {}
@@ -365,7 +370,7 @@ def api_action(request, advreport, method, object_id=None):
     if a.is_regular_view and request.is_ajax() and form and form.is_valid():
         reply.update({'link_action': {'method': method, 'data': request.POST}})
     else:
-        # Check if we have a form. If so, we will add them to the arguments.
+        # Check if we have a form. If so, we will add it to the arguments.
         if form:
             action_args.append(form)
 

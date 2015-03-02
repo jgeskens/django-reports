@@ -163,6 +163,9 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
     };
 
     $scope.update_item = function(item, data, expand_next) {
+        if (!item){
+            return;
+        }
         if (!!data.item){
             // We successfully got an item back
             var new_item = data.item;
@@ -250,7 +253,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
     };
 
     $scope.show_action_form = function(item, action){
-        if (action.form === true){
+        if (action.form === true || action.is_report_action){
             $scope.fetch_form(item, action);
         } else {
             $scope.form = action;
@@ -339,6 +342,10 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
             $scope.detail_action_dialog_style = response.dialog_style || {width: 'auto'};
             $scope.detail_popup.modal('show');
         }
+
+        if (action.is_report_action && $scope.detail_action != action){
+            $scope.fetch_report();
+        }
     };
 
     $scope.handle_action_error = function(error){
@@ -350,7 +357,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         var data = $scope.action_form_form.serialize();
         var item = form.item;
 
-        if (!item){
+        if (!item && !form.is_report_action){
             $scope.execute_multiple_action({data: data});
             return;
         }

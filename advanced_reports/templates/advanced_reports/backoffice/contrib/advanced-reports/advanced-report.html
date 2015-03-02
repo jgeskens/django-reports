@@ -126,17 +126,27 @@
                 <label><a href ng-show="has_applied_filters()" ng-click="remove_filters()">{% trans "show all" %}</a></label>
             </div>
         </form>
+        <div class="col-lg-4 col-md-5 col-sm-6 align-right">
+            <form ng-submit="execute_multiple_action()" class="form-inline" role="form" ng-show="show_action_select()">
+                <div class="form-group">
+                    <select ng-model="multiple_action" class="form-control"
+                            ng-options="action.method as action.verbose_name for action in report.multiple_action_list">
+                        <option value="" disabled>{% trans "With selected:" %}</option>
+                    </select>
+                </div>
 
-        <form ng-submit="execute_multiple_action()" class="form-inline col-lg-4 col-md-5 col-sm-6 align-right" role="form" ng-show="show_action_select()">
-            <div class="form-group">
-                <select ng-model="multiple_action" class="form-control"
-                        ng-options="action.method as action.verbose_name for action in report.multiple_action_list">
-                    <option value="" disabled>{% trans "With selected:" %}</option>
-                </select>
+                <button type="submit" class="btn btn-success" ng-disabled="!multiple_action">{% trans "Execute" %}</button>
+            </form>
+            {% verbatim %}
+            <div class="btn-group" ng-show="report.report_action_list.length > 0" ng-hide="show_action_select()">
+                <a class="btn {{ action.css_class|default:'btn-default' }}"
+                   link-to="get_action_link(null, action)"
+                   ng-click="execute_action(null, action)"
+                   ng-repeat="action in report.report_action_list"
+                   ng-bind="action.verbose_name"></a>
             </div>
-
-            <button type="submit" class="btn btn-success" ng-disabled="!multiple_action">{% trans "Execute" %}</button>
-        </form>
+            {% endverbatim %}
+        </div>
     </div>
 
     <div ng-include="'/pagination.html'"></div>
