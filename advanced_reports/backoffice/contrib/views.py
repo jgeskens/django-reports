@@ -58,7 +58,7 @@ class AdvancedReportView(BackOfficeView):
         report_slug = request.view_params.get('slug')
         method = request.view_params.get('report_method')
         pk = request.view_params.get('pk')
-        return api_action(request, report_slug, method, int(pk))
+        return api_action(request, report_slug, method, pk and int(pk) or None)
 
     def multiple_action(self, request):
         report_slug = request.view_params.get('slug')

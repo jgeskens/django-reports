@@ -308,7 +308,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
     $scope.handle_action_response = function(response, item, action){
         if (response.link_action){
             $scope.action_form_popup.modal('hide');
-            if (response.item){
+            if (response.item || action.is_report_action){
                 window.location.href = $scope.get_action_view_url(
                     response.item,
                     response.link_action,
@@ -432,7 +432,10 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
     };
 
     $scope.get_action_view_url = function(item, action, extra_params){
-        var default_data = {report_method: action.method, pk: item.item_id};
+        var default_data = {report_method: action.method};
+        if (!!item){
+            default_data['pk'] = item.item_id;
+        }
         if (extra_params !== undefined){
             default_data = angular.extend(default_data, extra_params);
         }
