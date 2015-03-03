@@ -21,3 +21,10 @@ History
 
 * Fix issue where the translation system could be triggered too soon
 
+0.9.5 (2015-03-03)
+++++++++++++++++++
+
+* Add possibility to add report-wide actions using ``is_report_action=True``.
+* Add full CRUD example to examples page on demo website
+* Small bugfix concerning the confirmation dialog
+
