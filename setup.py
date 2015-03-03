@@ -8,7 +8,7 @@ setup(
     url='https://github.com/vikingco/django-advanced-reports',
     license='BSD',
     description="Advanced reports for Django",
-    long_description=open('README.md', 'r').read(),
+    long_description=open('README.rst', 'r').read(),
     author='Jef Geskens, VikingCo nv',
     packages=find_packages('.'),
     package_data = {'advanced_reports': [

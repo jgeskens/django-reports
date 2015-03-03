@@ -1,7 +1,7 @@
 .. :changelog:
 
-History
--------
+Changelog
+---------
 
 0.9.2 (2015-02-20)
 ++++++++++++++++++
@@ -27,4 +27,3 @@ History
 * Add possibility to add report-wide actions using ``is_report_action=True``.
 * Add full CRUD example to examples page on demo website
 * Small bugfix concerning the confirmation dialog
-

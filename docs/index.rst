@@ -13,6 +13,7 @@ Contents:
 
    reports/index
    backoffice/index
+   changelog
 
 
 Indices and tables
