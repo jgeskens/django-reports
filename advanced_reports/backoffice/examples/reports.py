@@ -8,6 +8,7 @@ import six
 
 from advanced_reports.backoffice.shortcuts import action
 from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
+from oemfoe_todos_app.models import TodoList
 
 
 User = get_user_model()
@@ -139,3 +140,29 @@ class NewStyleReport(BootstrapReport):
         if form.cleaned_data['factor'] == 2:
             raise ActionException("I don't like factor two :-(")
         return 'The given factor was: %d' % form.cleaned_data['factor']
+
+
+class TodoListForm(forms.ModelForm):
+    class Meta:
+        model = TodoList
+        fields = ('name', 'owner')
+
+
+class TodoListReport(BootstrapReport):
+    model = TodoList
+    fields = ('name', 'owner')
+    search_fields = ('name',)
+    sortable_fields = fields
+    multiple_actions = True
+
+    @action('New Todo List', form=TodoListForm, is_report_action=True, css_class='btn-primary')
+    def new(self, form):
+        form.save()
+
+    @action('Edit', form=TodoListForm, css_class='btn-warning')
+    def edit(self, todo_list, form):
+        form.save()
+
+    @action('Delete', confirm='Are you sure you want to delete %(name)s?', css_class='btn-danger')
+    def delete(self, todo_list):
+        todo_list.delete()

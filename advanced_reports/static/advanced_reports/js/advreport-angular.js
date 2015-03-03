@@ -65,9 +65,11 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
 
     $scope.show_header = function(){
         return $scope.report
-                && $scope.report.report_header_visible
-                && !$scope.single_action
-                && ($scope.show_search() || $scope.show_action_select());
+            && $scope.report.report_header_visible
+            && !$scope.single_action
+            && ($scope.show_search()
+            || $scope.show_action_select()
+            || $scope.report.report_action_list.length > 0);
     };
 
     $scope.show_search = function(){
@@ -269,6 +271,9 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
             if ($scope.is_link_action(action))
                 return;
             var execute = function(){
+                if (action.confirm && !force){
+                    $scope.action_confirm_popup.modal('hide');
+                }
                 $scope.view.action('action', {method: action.method, pk: item.item_id}, false).then(function(data){
                     $scope.handle_action_response(data, item, action);
                 }, $scope.handle_action_error);
@@ -343,7 +348,10 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
             $scope.detail_popup.modal('show');
         }
 
-        if (action.is_report_action && $scope.detail_action != action){
+        if (action.is_report_action
+            && $scope.detail_action != action
+            && !response.response_form){
+
             $scope.fetch_report();
         }
     };
