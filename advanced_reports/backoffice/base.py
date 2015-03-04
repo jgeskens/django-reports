@@ -930,6 +930,7 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
                         url(r'^api/$', self.decorate(self.api), name='api_home'),
                         url(r'^login/as/(?P<user_id>\d+)/$', self.decorate(self.login_as), name='login_as'),
                         url(r'^end/login/as/$', self.end_login_as, name='end_login_as'),
+                        url(r'^handle/$', self.handle, name='handle'),
                         *self.define_urls()
         ), self.app_name, self.name
 
@@ -1025,3 +1026,5 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
         msgs = [m.__dict__ for m in messages.get_messages(request)]
         return JSONResponse({'messages': msgs, 'response_data': response})
 
+    def handle(self, request):
+        raise Http404
