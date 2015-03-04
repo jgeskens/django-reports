@@ -1053,14 +1053,15 @@ class AdvancedReport(object):
         return html
 
     def get_html_for_value(self, value):
-        return value
+        """
+        Override this method to generate HTML for specific values.
+        """
+        return escape(six.text_type(value))
 
     def get_item_html(self, field_name, item):
-        value = getattr(self, 'get_%s_html' % field_name, lambda i: None)(item)
-        if value is None:
-            value = self.lookup_item_value(field_name, item)
-
-        html = self.get_html_for_value(value)
+        html = getattr(self, 'get_%s_html' % field_name, lambda i: None)(item)
+        if html is None:
+            html = self.get_html_for_value(self.lookup_item_value(field_name, item))
 
         decorator = getattr(self, 'get_%s_decorator' % field_name, lambda i: None)(item)
         if decorator is not None:
@@ -1283,5 +1284,3 @@ class BootstrapReport(AdvancedReport):
     template = 'advanced_reports/bootstrap/report.html'
     item_template = 'advanced_reports/bootstrap/item.html'
 
-    def get_html_for_value(self, value):
-        return escape(six.text_type(value))
