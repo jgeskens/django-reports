@@ -27,3 +27,13 @@ Changelog
 * Add possibility to add report-wide actions using ``is_report_action=True``.
 * Add full CRUD example to examples page on demo website
 * Small bugfix concerning the confirmation dialog
+
+0.9.6 (2015-03-04)
+++++++++++++++++++
+
+* Escape AdvancedReport field values by default for security
+* Add link_to HTML decorator possibility by providing the BackOfficeReportMixin
+* Small cleanups and fix MANIFEST.in
+* Fix setup.py and add changelog to docs
+* Converted README to reST format
+
