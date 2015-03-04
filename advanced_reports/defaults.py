@@ -18,11 +18,6 @@ from django.utils.html import strip_tags, escape
 from django.utils.translation import ugettext_lazy as _
 from django.forms.models import fields_for_model
 
-try:
-    from six import wraps
-except ImportError:
-    from functools import wraps
-
 import six
 
 from advanced_reports.backoffice.base import AutoSlug
@@ -269,7 +264,7 @@ class action(object):
         self.method = function.__name__
         self.attrs_dict['method'] = self.method
 
-        @wraps(function)
+        @six.wraps(function)
         def decorator(*args, **kwargs):
             return function(*args, **kwargs)
         decorator.action = self
@@ -778,7 +773,7 @@ class AdvancedReport(object):
         """
         Return a dict used as argument to Model.objects.filter() function.
         But we need to be sure that we can filter on these fields so we check if there is no filter_* function defined
-        in advanced report devinition
+        in advanced report definition
         """
         result = {}
         for filter_field in self.filter_fields:
@@ -962,7 +957,6 @@ class AdvancedReport(object):
 #            return method
         return getattr(self, method, lambda i, f=None: False)
 
-
     def handle_multiple_actions(self, method, selected_object_ids, request=None):
         '''
         Deprecated. Don't use anymore!
@@ -1099,7 +1093,6 @@ class AdvancedReport(object):
         self.assign_attr(o, 'advreport_class', self.get_item_class(o))
         self.assign_attr(o, 'advreport_extra_information', self.get_extra_information(o) % Resolver({'item': o}))
 
-
     def enrich_generic_relation(self, items, our_model, foreign_model, attr_name, fallback):
         '''
         This is a utility method that can be used to prefetch backwards generic foreign key relations.
@@ -1232,6 +1225,7 @@ class AdvancedReport(object):
     def urlize(self, urlname, kwargs):
         return lambda h: u'<a href="%(l)s">%(h)s</a>' % {'l': reverse(urlname, kwargs=kwargs), 'h': h}
 
+
 class EnrichedQueryset(object):
     def __init__(self, queryset, advreport, request=None):
         self.queryset = queryset
@@ -1274,6 +1268,7 @@ class EnrichedQueryset(object):
     def _enrich(self, o):
         self.advreport.enrich_object(o, self.request)
         return o
+
 
 class Resolver(object):
     def __init__(self, context):
