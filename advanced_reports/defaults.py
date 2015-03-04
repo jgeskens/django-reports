@@ -1226,7 +1226,8 @@ class AdvancedReport(object):
 class EnrichedQueryset(object):
     def __init__(self, queryset, advreport, request=None):
         self.queryset = queryset
-        self.queryset.query.add_ordering('pk')
+        if isinstance(self.queryset, QuerySet):
+            self.queryset.query.add_ordering('pk')
         self.advreport = advreport
         self.request = request
 

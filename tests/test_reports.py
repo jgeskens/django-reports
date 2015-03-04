@@ -23,3 +23,5 @@ class AdvancedReportTest(TestCase):
         self.assertListEqual(['pk'], eqs.queryset.query.order_by)
         eqs = EnrichedQueryset(User.objects.all().order_by('first_name'), self.report)
         self.assertListEqual(['first_name', 'pk'], eqs.queryset.query.order_by)
+        eqs = EnrichedQueryset(['a','b','c'], self.report)
+        self.assertListEqual(['a','b','c'], eqs.queryset)
