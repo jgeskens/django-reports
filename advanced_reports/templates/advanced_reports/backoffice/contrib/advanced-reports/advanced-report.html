@@ -26,9 +26,7 @@
                         <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                         <h4 class="modal-title" ng-bind="form.verbose_name"></h4>
                     </div>
-                    <div class="modal-body">
-                        <div class="form-horizontal" role="form" ng-bind-html-unsafe="form.form"></div>
-                    </div>
+                    <div class="form-horizontal" role="form" ng-bind-html-unsafe="form.form"></div>
                     <div class="modal-footer">
                         <button ng-disabled="isLoading()" type="button" class="btn btn-default" ng-click="action_form_popup.modal('hide')">{% trans "Cancel" %}</button>
                         <input ng-disabled="isLoading()" type="submit" class="btn btn-primary" ng-click="submit_form(form)" value="{% templatetag openvariable %}form.submit||'{% trans "Submit" %}'{% templatetag closevariable %}">
