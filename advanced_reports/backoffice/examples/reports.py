@@ -5,6 +5,7 @@ from django.http.response import HttpResponse
 from django.template.defaultfilters import yesno
 from django.utils.html import escape
 import six
+from advanced_reports.backoffice.contrib.mixins import BackOfficeReportMixin
 
 from advanced_reports.backoffice.shortcuts import action
 from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
@@ -148,7 +149,7 @@ class TodoListForm(forms.ModelForm):
         fields = ('name', 'owner')
 
 
-class TodoListReport(BootstrapReport):
+class TodoListReport(BackOfficeReportMixin, BootstrapReport):
     model = TodoList
     fields = ('name', 'owner')
     search_fields = ('name',)
@@ -166,3 +167,6 @@ class TodoListReport(BootstrapReport):
     @action('Delete', confirm='Are you sure you want to delete %(name)s?', css_class='btn-danger')
     def delete(self, todo_list):
         todo_list.delete()
+
+    def get_name_decorator(self, todo_list):
+        return self.link_to(todo_list)
