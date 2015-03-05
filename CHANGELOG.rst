@@ -37,3 +37,11 @@ Changelog
 * Fix setup.py and add changelog to docs
 * Converted README to reST format
 
+0.9.7 (2015-03-05)
+++++++++++++++++++
+
+* `2691ba3 <https://github.com/vikingco/django-advanced-reports/commit/2691ba3>`_ Fix report form error styling issue <Jef Geskens>
+* `31ee2e5 <https://github.com/vikingco/django-advanced-reports/commit/31ee2e5>`_ Add example of ``link_to`` HTML decorator <Jef Geskens>
+* `086ec98 <https://github.com/vikingco/django-advanced-reports/commit/086ec98>`_ Fix enriched queryset ordering issue <Jakub Paczkowski>
+* `3a47616 <https://github.com/vikingco/django-advanced-reports/commit/3a47616>`_ Add tests for the enriched queryset ordering issue fix <Jakub Paczkowski>
+* `521a257 <https://github.com/vikingco/django-advanced-reports/commit/521a257>`_ Add default ordering to the enriched queryset <Jakub Paczkowski>
