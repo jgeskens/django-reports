@@ -221,7 +221,6 @@ class ReportViewsTestCase(TestCase):
         response = self.client.post('/reports/api/simple/')
         self.assertIn('application/json', response['Content-Type'])
         data = json.loads(response.content)
-
         self.assertEqual(data['action_list_type'], 'links')
         self.assertEqual(data['extra'], {
             'ascending': True,
@@ -278,3 +277,9 @@ class ReportViewsTestCase(TestCase):
         self.assertEqual(data['search_fields'], ['username', 'first_name', 'last_name', 'email'])
         self.assertEqual(data['searchable_columns'], 'You can search by Username, First name, Last name, Email address')
         self.assertTrue(data['show_action_bar'])
+
+        row_limit = 50
+        response = self.client.post('/reports/api/simple/?row_limit=' + str(row_limit))
+        self.assertIn('application/json', response['Content-Type'])
+        data = json.loads(response.content)
+        self.assertEqual(data['items_per_page'], row_limit)
