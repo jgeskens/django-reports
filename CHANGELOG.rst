@@ -45,3 +45,12 @@ Changelog
 * `086ec98 <https://github.com/vikingco/django-advanced-reports/commit/086ec98>`_ Fix enriched queryset ordering issue <Jakub Paczkowski>
 * `3a47616 <https://github.com/vikingco/django-advanced-reports/commit/3a47616>`_ Add tests for the enriched queryset ordering issue fix <Jakub Paczkowski>
 * `521a257 <https://github.com/vikingco/django-advanced-reports/commit/521a257>`_ Add default ordering to the enriched queryset <Jakub Paczkowski>
+
+0.9.8 (2015-03-10)
+++++++++++++++++++
+
+* `7e4adf4 <https://github.com/vikingco/django-advanced-reports/commit/7e4adf4>`_ Expose fetch_report so it can be called from outside <Jef Geskens>
+* `ca38578 <https://github.com/vikingco/django-advanced-reports/commit/ca38578>`_ Fix styling issue for new compact view <Jef Geskens>
+* `5406d7b <https://github.com/vikingco/django-advanced-reports/commit/5406d7b>`_ Extra examples for new compact property <Jef Geskens>
+* `8118733 <https://github.com/vikingco/django-advanced-reports/commit/8118733>`_ Introduce compact mode and inline action buttons <Jef Geskens>
+
