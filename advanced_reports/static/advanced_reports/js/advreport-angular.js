@@ -456,7 +456,8 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
 
     $scope.num_header_columns = function(){
         if ($scope.report){
-            return $scope.report.header.length + ($scope.report.compact ? 1 : 2);
+            return $scope.report.header.length +
+                ($scope.report.compact && $scope.report.action_list_type != 'inline_buttons' ? 1 : 2);
         }
         return 0;
     };
