@@ -4,11 +4,10 @@ from django import forms
 from django.http.response import HttpResponse
 from django.template.defaultfilters import yesno
 from django.utils.html import escape
-import six
 from advanced_reports.backoffice.contrib.mixins import BackOfficeReportMixin
 
 from advanced_reports.backoffice.shortcuts import action
-from advanced_reports.defaults import AdvancedReport, ActionException, BootstrapReport
+from advanced_reports.defaults import ActionException, BootstrapReport, ActionType
 from oemfoe_todos_app.models import TodoList
 
 
@@ -35,6 +34,8 @@ class UserReport(BootstrapReport):
     template = 'advanced_reports/bootstrap/report.html'
     item_template = 'advanced_reports/bootstrap/item.html'
     date_range = 'last_login'
+    action_list_type = ActionType.INLINE_BUTTONS
+    compact = True
 
     def queryset_request(self, request):
         return User.objects.all()
@@ -155,8 +156,11 @@ class TodoListReport(BackOfficeReportMixin, BootstrapReport):
     search_fields = ('name',)
     sortable_fields = fields
     multiple_actions = True
+    action_list_type = ActionType.INLINE_BUTTONS
+    compact = True
 
-    @action('New Todo List', form=TodoListForm, is_report_action=True, css_class='btn-primary')
+    @action('New Todo List', form=TodoListForm, is_report_action=True,
+            css_class='btn-primary')
     def new(self, form):
         form.save()
 
@@ -164,7 +168,8 @@ class TodoListReport(BackOfficeReportMixin, BootstrapReport):
     def edit(self, todo_list, form):
         form.save()
 
-    @action('Delete', confirm='Are you sure you want to delete %(name)s?', css_class='btn-danger')
+    @action('Delete', confirm='Are you sure you want to delete %(name)s?',
+            css_class='btn-danger', individual_display=False)
     def delete(self, todo_list):
         todo_list.delete()
 
