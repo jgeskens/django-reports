@@ -462,5 +462,8 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         return 0;
     };
 
+    // Expose fetch_report to outside world
+    $scope.view.fetch_report = $scope.fetch_report;
+
     $scope.fetch_report();
 }]);
