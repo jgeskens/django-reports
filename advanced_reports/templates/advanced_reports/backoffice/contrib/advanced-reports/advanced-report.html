@@ -150,11 +150,11 @@
     <div ng-include="'/pagination.html'"></div>
 
     <div class="tablecontainer" ng-show="report && !single_action">
-        <table class="data table table-striped">
+        <table class="table {% if not advreport.compact %}table-striped{% endif %}">
             <thead>
                 <tr ng-show="report.all_selected && report.item_count > report.items_per_page" ng-class="{warning: !report.all_selected_global, success: report.all_selected_global}">
                     {% verbatim %}
-                    <td colspan="{{ report.header.length + 2 }}">
+                    <td colspan="{{ num_header_columns() }}">
                         {% endverbatim %}
                         {% trans "Only {{ selected_count() }} selected. Select all {{ report.item_count }}?" %}
                         <a href ng-hide="report.all_selected_global" ng-click="report.all_selected_global=true">{% trans "Yes" %}</a>
@@ -166,7 +166,7 @@
                 </tr>
                 <tr>
                     {% verbatim %}
-                    <th ng-style="{width: {true: '24px', false: '0'}[report.multiple_actions]}">
+                    <th ng-style="{width: {true: '24px', false: '0'}[report.multiple_actions]}" ng-show="select_mode() || report.multiple_actions">
                         <input type="checkbox" ng-model="report.all_selected" ng-click="update_selected()" ng-show="report.multiple_actions && !select_mode()">
                     </th>
                     {% endverbatim %}
@@ -175,39 +175,48 @@
                         <a href ng-bind="column.verbose_name" ng-show="column.sortable" ng-click="change_order(column.order_by)"></a>
                         <span ng-show="report.extra.order_field==column.name" ng-bind="{true:'&darr;', false:'&uarr;'}[report.extra.ascending]"></span>
                     </th>
-                    <th class="col-sm-2"></th>
+                    {% if not advreport.compact or advreport.action_list_type == 'inline_buttons' %}<th class="col-sm-2"></th>{% endif %}
                 </tr>
             </thead>
 
-            <tbody ng-repeat="item in report.items">
+            <tbody ng-repeat="item in report.items" {% if advreport.compact %}style="border: 0"{% endif %}>
                 <tr ng-click="toggle_expand(item)" ng-class="{success: multiple_succeeded[item.item_id], danger: multiple_failed[item.item_id]}">
-                    <td>
+                    <td ng-show="select_mode() || report.multiple_actions">
                         <input type="checkbox" ng-model="selected[item.item_id]" ng-click="update_all_selected();$event.stopPropagation()" ng-show="report.multiple_actions && !select_mode()">
                         <a ng-show="select_mode()" href ng-click="view.selected_item=item;trigger_success_attr({method: 'select'})">{% trans "select" %}</a>
                     </td>
-                    <td ng-repeat="value in item.values" compile="value.html" ng-style="value.style" ng-class="value.class"></td>
+                    {% verbatim %}
+                    <td ng-repeat="value in item.values" compile="value.html" style="{{ value.style }}" class="{{ value.class }}"></td>
+                    {% endverbatim %}
+                    {% if not advreport.compact or advreport.action_list_type == 'inline_buttons' %}
                     <td>
                         <span ng-show="has_expanded_content(item)">
                             <a ng-show="item.expanded && !select_mode()" href>{% trans "hide details" %}</a>
                             <a ng-hide="item.expanded || select_mode()" href>{% trans "show details" %}</a>
                         </span>
+                        {% verbatim %}
+                        <div class="btn-group" ng-show="report.action_list_type == 'inline_buttons'">
+                            <a class="btn btn-xs {{ action.css_class|default:'btn-default' }}" link-to="get_action_link(item, action)" ng-click="execute_action(item, action)" ng-repeat="action in item.actions|filter:is_button_action">{{ action.verbose_name }}</a>
+                        </div>
+                        {% endverbatim %}
                     </td>
+                    {% endif %}
                 </tr>
                 <tr ng-show="multiple_succeeded[item.item_id] && item.expanded" class="success">
                     {% verbatim %}
-                    <td colspan="{{ report.header.length + 2 }}" ng-bind="multiple_succeeded[item.item_id]"></td>
+                    <td colspan="{{ num_header_columns() }}" ng-bind="multiple_succeeded[item.item_id]"></td>
                     {% endverbatim %}
                 </tr>
                 <tr ng-show="multiple_failed[item.item_id] && item.expanded" class="danger">
                     {% verbatim %}
-                    <td colspan="{{ report.header.length + 2 }}" ng-bind="multiple_failed[item.item_id]"></td>
+                    <td colspan="{{ num_header_columns() }}" ng-bind="multiple_failed[item.item_id]"></td>
                     {% endverbatim %}
                 </tr>
 
                 <tr ng-show="item.expanded">
                     {% verbatim %}
-                    <td colspan="{{ report.header.length + 2 }}">
-                        <div class="btn-group">
+                    <td colspan="{{ num_header_columns() }}">
+                        <div class="btn-group" ng-hide="report.action_list_type == 'inline_buttons'">
                             <a class="btn {{ action.css_class|default:'btn-default' }}" link-to="get_action_link(item, action)" ng-click="execute_action(item, action)" ng-repeat="action in item.actions|filter:is_button_action">{{ action.verbose_name }}</a>
                         </div>
                         <div ng-repeat="action in item.actions|filter:is_inline_form_action">
@@ -224,7 +233,7 @@
             <tbody ng-show="report.items.length==0">
                 <tr>
                     {% verbatim %}
-                    <td colspan="{{ report.header.length + 2 }}">
+                    <td colspan="{{ num_header_columns() }}">
                     {% endverbatim %}
                         <small>{% blocktrans with advreport.verbose_name_plural as items_name %}No {{ items_name }} to show...{% endblocktrans %}</small>
                     </td>

@@ -41,7 +41,7 @@ class AdvancedReportView(BackOfficeView):
         method = request.action_params.get('method')
         pk = request.action_params.get('pk')
         slug = request.view_params.get('slug')
-        return api_form(request, slug, method, pk and int(pk) or None)
+        return api_form(request, slug, method, pk or None)
 
     def action(self, request):
         method = request.action_params.get('method')
@@ -52,13 +52,13 @@ class AdvancedReportView(BackOfficeView):
             # We have to do str(data) because otherwise QueryDict is too lazy to decode...
             post = QueryDict(str(data), encoding='utf-8')
             request.POST = post
-        return api_action(request, slug, method, pk and int(pk) or None)
+        return api_action(request, slug, method, pk or None)
 
     def action_view(self, request):
         report_slug = request.view_params.get('slug')
         method = request.view_params.get('report_method')
         pk = request.view_params.get('pk')
-        return api_action(request, report_slug, method, pk and int(pk) or None)
+        return api_action(request, report_slug, method, pk or None)
 
     def multiple_action(self, request):
         report_slug = request.view_params.get('slug')

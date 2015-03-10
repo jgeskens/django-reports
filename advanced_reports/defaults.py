@@ -413,6 +413,12 @@ class AdvancedReport(object):
     #: to report in an other template
     internal_mode = False
 
+    #: Whether the report should be rendered in a more compact way. This controls for example
+    #: if the rows are rendered using <tbody> with two rows or just normal direct <tr> tags.
+    #: Also the show details / hide details link will disappear.
+    compact = False
+
+
     def __init__(self, *args, **kwargs):
         self.model_admin = None
 

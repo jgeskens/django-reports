@@ -87,7 +87,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
 
     $scope.has_expanded_content = function(item){
         return (item.extra_information.length > 0
-            || item.actions.length > 0
+            || item.actions.length > 0 && $scope.report.action_list_type != 'inline_buttons'
             || $scope.multiple_succeeded[item.item_id]
             || $scope.multiple_failed[item.item_id]);
     };
@@ -452,6 +452,13 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
 
     $scope.select_mode = function(){
         return $scope.view.params.selectMode == 'true';
+    };
+
+    $scope.num_header_columns = function(){
+        if ($scope.report){
+            return $scope.report.header.length + ($scope.report.compact ? 1 : 2);
+        }
+        return 0;
     };
 
     $scope.fetch_report();
