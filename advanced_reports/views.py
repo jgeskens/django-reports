@@ -90,11 +90,7 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
                                             else object_list[:],
                                         name='CSV export of %s' % advreport.slug,
                                         count=object_count))
-        lines = (line.replace(u'&nbsp;', u' ') for line in lines)
-        lines = (line.replace(u'&euro;', u'€') for line in lines)
-        lines = (line.replace(u'<br/>', u' ') for line in lines)
-        lines = (strip_entities(line) for line in lines)
-        lines = (strip_tags(line).encode('utf-8') for line in lines)
+        lines = (strip_tags(strip_entities(line.replace(u'&nbsp;', u' ').replace(u'&euro;', u'€').replace(u'<br/>', u' '))).encode('utf-8') for line in lines)
         #csv.write(header)
         #csv.writelines(lines)
         response = HttpResponse('', 'text/csv')
