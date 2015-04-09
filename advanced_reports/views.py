@@ -99,6 +99,9 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
         #csv.write(header)
         #csv.writelines(lines)
         response_content = itertools.chain([header], lines)
+
+        # We use streaming http response because sometimes generation of each line takes some time and for big exports
+        # it leads to timeout on the response generation
         response = StreamingHttpResponse(response_content, content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="%s.csv"' % advreport.slug
 
