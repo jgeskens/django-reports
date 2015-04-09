@@ -2,13 +2,14 @@
 from django import forms
 from django.contrib import messages
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render_to_response, redirect
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
 from django.utils.html import strip_entities, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
+import itertools
 
 import six
 
@@ -90,14 +91,17 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
                                             else object_list[:],
                                         name='CSV export of %s' % advreport.slug,
                                         count=object_count))
-        lines = (strip_tags(strip_entities(line.replace(u'&nbsp;', u' ').replace(u'&euro;', u'€').replace(u'<br/>', u' '))).encode('utf-8') for line in lines)
+        lines = (line.replace(u'&nbsp;', u' ') for line in lines)
+        lines = (line.replace(u'&euro;', u'€') for line in lines)
+        lines = (line.replace(u'<br/>', u' ') for line in lines)
+        lines = (strip_entities(line) for line in lines)
+        lines = (strip_tags(line).encode('utf-8') for line in lines)
         #csv.write(header)
         #csv.writelines(lines)
-        response = HttpResponse('', 'text/csv')
+        response_content = itertools.chain([header], lines)
+        response = StreamingHttpResponse(response_content, content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="%s.csv"' % advreport.slug
-        response.write(header)
-        for line in lines:
-            response.write(line)
+
         return response
 
     # Paginate
