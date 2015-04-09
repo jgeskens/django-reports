@@ -135,7 +135,7 @@ class ReportViewsTestCase(TestCase):
     def test_list_csv(self):
         response = self.client.get('/reports/simple/?csv', follow=True)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.content,
+        self.assertEqual("".join(response.streaming_content),
                          'Username;Email address;First name;Last name;Staff status\n' +
                          'test;test@example.com;Test;User;False\n')
 
