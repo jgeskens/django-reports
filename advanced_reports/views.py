@@ -2,13 +2,14 @@
 from django import forms
 from django.contrib import messages
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, StreamingHttpResponse
 from django.shortcuts import render_to_response, redirect
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
 from django.utils.html import strip_entities, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
+import itertools
 
 import six
 
@@ -97,11 +98,13 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
         lines = (strip_tags(line).encode('utf-8') for line in lines)
         #csv.write(header)
         #csv.writelines(lines)
-        response = HttpResponse('', 'text/csv')
+        response_content = itertools.chain([header], lines)
+
+        # We use streaming http response because sometimes generation of each line takes some time and for big exports
+        # it leads to timeout on the response generation
+        response = StreamingHttpResponse(response_content, content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="%s.csv"' % advreport.slug
-        response.write(header)
-        for line in lines:
-            response.write(line)
+
         return response
 
     # Paginate
