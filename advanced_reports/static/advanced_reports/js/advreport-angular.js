@@ -1,6 +1,8 @@
 angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$http', '$location', 'boUtils', 'boApi', function ($scope, $http, $location, boUtils, boApi){
     $scope.report = null;
     $scope.page_count = null;
+    $scope.row_limit_choices = [20, 50, 100];
+    $scope.row_limit = $scope.row_limit_choices[0];
     $scope.filters = {};
     $scope.applied_filters = {};
     $scope.search = $location.search() || {};
@@ -134,6 +136,12 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         return boUtils.keyCount($scope.selected);
     };
 
+    $scope.change_row_limit = function() {
+        $scope.search.row_limit = $scope.row_limit;
+        $scope.search.page = 1;
+        $scope.fetch_report();
+    }
+
     $scope.change_order = function(order_by) {
         var ascending = $scope.report.extra.order_by != order_by || !$scope.report.extra.ascending;
         $scope.search.order = (ascending ? '' : '-') + order_by;
@@ -161,6 +169,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         $scope.loader='search';
         $scope.filter = {};
         $scope.search = {order: $scope.search.order, page: 1};
+        $scope.row_limit = $scope.row_limit_choices[0];
         $scope.fetch_report();
     };
 

@@ -310,6 +310,9 @@ def _is_allowed_multiple_action(request, advreport, action):
 def api_list(request, advreport, ids=None):
     object_list, extra_context = advreport.get_object_list(request, ids=ids)
 
+    if 'row_limit' in request.GET:
+        advreport.items_per_page = int(request.GET['row_limit'])
+
     paginated = paginate(request, object_list, advreport.items_per_page)
 
     report = {
