@@ -76,10 +76,10 @@ class AdvancedReportView(BackOfficeView):
             items, context = advreport.get_object_list(request)
         else:
             items = [advreport.get_item_for_id(pk) for pk in items]
+        advreport.set_request(request)
         if hasattr(advreport, '%s_multiple' % method):
             try:
                 action = advreport.find_action(method)
-                advreport.set_request(request)
                 if action.form:
                     form = action.form(request.POST, prefix='actionform')
                     if form.is_valid():
@@ -105,7 +105,6 @@ class AdvancedReportView(BackOfficeView):
             for item in items:
                 try:
                     action = advreport.find_object_action(item, method)
-                    advreport.set_request(request)
                     if action:
                         if action.is_allowed(request):
                             result = getattr(advreport, method)(item)
