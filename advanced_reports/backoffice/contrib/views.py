@@ -76,6 +76,7 @@ class AdvancedReportView(BackOfficeView):
             items, context = advreport.get_object_list(request)
         else:
             items = [advreport.get_item_for_id(pk) for pk in items]
+        advreport.set_request(request)
         if hasattr(advreport, '%s_multiple' % method):
             try:
                 action = advreport.find_action(method)
