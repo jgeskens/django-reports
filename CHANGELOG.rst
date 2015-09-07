@@ -54,3 +54,15 @@ Changelog
 * `5406d7b <https://github.com/vikingco/django-advanced-reports/commit/5406d7b>`_ Extra examples for new compact property <Jef Geskens>
 * `8118733 <https://github.com/vikingco/django-advanced-reports/commit/8118733>`_ Introduce compact mode and inline action buttons <Jef Geskens>
 
+0.9.9 (2015-09-07)
+++++++++++++++++++
+
+* `ced26b2 <https://github.com/vikingco/django-advanced-reports/commit/ced26b2>`_ deduplicate call <Daniel Borzęcki>
+* `61f032d <https://github.com/vikingco/django-advanced-reports/commit/61f032d>`_ ensure request is present when executing multiple actions <Daniel Borzęcki>
+* `961c1d0 <https://github.com/vikingco/django-advanced-reports/commit/961c1d0>`_ enable row limit choice in reports' pages <Alexandros Ntavelos>
+* `a92567e <https://github.com/vikingco/django-advanced-reports/commit/a92567e>`_ re-arrange if/else conditions <Alexandros Ntavelos>
+* `d51a6b7 <https://github.com/vikingco/django-advanced-reports/commit/d51a6b7>`_ fix for tests <Jakub Paczkowski>
+* `7ed1664 <https://github.com/vikingco/django-advanced-reports/commit/7ed1664>`_ add comment <Jakub Paczkowski>
+* `2890472 <https://github.com/vikingco/django-advanced-reports/commit/2890472>`_ fix generation of large csv's <Jakub Paczkowski>
+* `8685a81 <https://github.com/vikingco/django-advanced-reports/commit/8685a81>`_ optimize generation of csv <Jakub Paczkowski>
+
