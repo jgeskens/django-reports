@@ -350,22 +350,33 @@ $(function(){
 
             connect_form: function(form, action_row, data_row) {
                 var instance = this;
+                var submitting = [false];
                 function submit_form()
                 {
                     var execute = function(){
+                        if (submitting[0]){
+                            // If we were already executing this action, do nothing.
+                            // This behavior is called 'debouncing'.
+                            return;
+                        }
+                        submitting[0] = true;
                         $.ajax({
                             'type': 'POST',
                             'url': form.attr('action').replace('/action/', '/ajax/'),
                             'dataType': 'text',
                             'data': form.serialize(),
                             'success': function (x) {
+                                submitting[0] = false;
                                 if (instance.internal) {
                                     refresh_reports();
                                 } else {
                                     instance.replace_rows(x, action_row, data_row, form.data('next') == true);
                                 }
                             },
-                            'error': function(x) { $.mbox_error(_("Alert"), x.responseText); }
+                            'error': function(x) {
+                                submitting[0] = false;
+                                $.mbox_error(_("Alert"), x.responseText);
+                            }
                         });
                     };
 
