@@ -901,13 +901,13 @@ class AdvancedReport(object):
 
                 if self.models:
                     fieldnames = [f.name for f in self.models[0]._meta.fields]
-                    lookup = dict((k, convert_value(k, v)) for k, v in request.GET.items() if k.split('__')[0] in fieldnames)
+                    lookup = dict((k, convert_value(k, v)) for k, v in request.GET.items() if v and k.split('__')[0] in fieldnames)
                     if lookup:
                         qs = qs.filter(**lookup)
 
                     for k, v in request.GET.items():
                         filter_fn = getattr(self, 'filter_%s' % k, None)
-                        if filter_fn:
+                        if filter_fn and v:
                             qs = filter_fn(qs, convert_value(k, v))
 
             return qs
