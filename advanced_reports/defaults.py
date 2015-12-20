@@ -143,7 +143,7 @@ class action(object):
 
     #: Whether the action is defined by the new style method (as a decorator) or not.
     #: The advantage is that new cool stuff that should not be backwards compatible can be enabled when this
-    #: attributes is True.
+    #: attribute is True.
     is_new_style = False
 
     def __init__(self, title=None, **kwargs):
