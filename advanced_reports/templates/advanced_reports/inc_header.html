@@ -69,10 +69,13 @@
         {% if not advreport.date_range %}
             <div class="bar">
                 <label for="search_field"><strong>{% trans "Search" %}:</strong></label>
-                <input type="text" id="search_field" name="q" value="{{ request.GET.q }}" title="{{ advreport.searchable_columns }}" />
+                <input style="width: auto;" type="text" id="search_field" name="q" value="{{ request.GET.q }}" title="{{ advreport.searchable_columns }}" />
                 <label><input type="checkbox" name="exact" {% if request.GET.exact %}checked="checked"{% endif %}/> {% trans "exact" %}</label>
                 {% if request.GET.q or request.GET.to %}
                     <a href=".">{% trans "show all" %}</a>
+                {% endif %}
+                {% if not advreport.filter_fields %}
+                <input type="submit" value="{% trans "Search" %}" />
                 {% endif %}
             </div>
         {% else %}
@@ -96,6 +99,11 @@
                                 <a href=".">{% trans "show all" %}</a>
                             {% endif %}
                         </td>
+                        {% if not advreport.filter_fields %}
+                        <td>
+                            <input type="submit" value="{% trans "Search" %}" />
+                        </td>
+                        {% endif %}
                     </tr>
                 </table>
             </div>
@@ -108,8 +116,9 @@
             {% endfor %}
 
         </div>
-        {% endif %}
         <input type="submit" value="{% trans "Search" %}" />
+        {% endif %}
+
     </form>
 
 {% endif %}
