@@ -165,7 +165,7 @@ class action(object):
             setattr(self, k, kwargs[k])
             self.attrs_dict[k] = kwargs[k]
 
-    def copy_with_instanced_form(self, advreport, prefix, instance=None, data=None):
+    def copy_with_instanced_form(self, advreport, prefix, instance=None, data=None, files=None):
         new_action = action(**self.attrs_dict)
         dynamic_form = getattr(advreport, 'get_%s_form' % new_action.method, None)
 
@@ -175,9 +175,9 @@ class action(object):
         elif self.form is not None:
             new_action.form = self.form
             if issubclass(self.form, forms.ModelForm):
-                new_action.form = self.form(data=data, prefix=prefix, instance=instance)
+                new_action.form = self.form(data=data, files=files, prefix=prefix, instance=instance)
             else:
-                new_action.form = self.form(data=data, prefix=prefix)
+                new_action.form = self.form(data=data, files=files, prefix=prefix)
 
         if new_action.form is not None:
             new_action.form_template = self.form_template
@@ -1296,4 +1296,3 @@ class Resolver(object):
 class BootstrapReport(AdvancedReport):
     template = 'advanced_reports/bootstrap/report.html'
     item_template = 'advanced_reports/bootstrap/item.html'
-
