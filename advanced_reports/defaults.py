@@ -3,7 +3,7 @@ import time
 from collections import OrderedDict
 
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -228,6 +228,26 @@ class action(object):
                                     {'form': form, 'item': instance},
                                     context_instance=RequestContext(request))
         return six.text_type(form)
+
+
+    @property
+    def form_is_simple(self):
+        return self.form is not None and not issubclass(self.form, forms.ModelForm)
+
+    @property
+    def suitable_for_multiple(self):
+        return not self.hidden and self.multiple_display and (not self.form or self.form_is_simple)
+
+    @property
+    def render_multiple_form(self):
+        if not self.form_is_simple:
+            return
+
+        bound_form = self.form(prefix='{}_multiple'.format(self.method))
+
+        if self.form_template:
+            return render_to_string(self.form_template, {'form': bound_form})
+        return six.text_type(bound_form.as_p())
 
     @property
     def is_regular_view(self):
@@ -962,34 +982,52 @@ class AdvancedReport(object):
         return u', '.join(verbose_names)
 
     def get_action_callable(self, method):
-#        if isinstance(method, basestring):
-#            return getattr(self, method, lambda i, f=None: False)
-#        else:
-#            return method
         return getattr(self, method, lambda i, f=None: False)
 
     def handle_multiple_actions(self, method, selected_object_ids, request=None):
-        '''
-        Deprecated. Don't use anymore!
-        '''
+        # Lookup the action
         action = self.find_action(method)
+        if action is None:
+            raise Http404
+
+        # Construct enriched list of objects
         objects = [o for o in (self.get_item_for_id(item_id) for item_id in selected_object_ids) if o]
         self.enrich_list(objects)
+        objects = [object for object in objects if self.verify_action_group(object, action.group)]
         for o in objects:
             self.enrich_object(o, list=False, request=request)
-        objects = [object for object in objects if self.verify_action_group(object, action.group)]
-        handler = getattr(self, '%s_multiple' % method, None)
-        if handler:
+
+        # Check if there is a FOO_multiple callable on this report
+        multiple_callable = getattr(self, '%s_multiple' % method, None)
+
+        # If we are dealing with forms, add an extra argument to the handler
+        extra_args = []
+        if action.form:
+            bound_form = action.form(prefix='{}_multiple'.format(method), data=request.POST, files=request.FILES)
+            if not bound_form.is_valid():
+                messages.error(
+                    request,
+                    u'{} {}'.format(
+                        _('The submitted form was not valid, so no action was taken.'),
+                        u', '.join(u'{}: {}'.format(field, error)
+                                   for field, errors in bound_form.errors.items()
+                                   for error in errors)
+                    )
+                )
+                return None, 0
+            extra_args.append(bound_form)
+
+        if multiple_callable is not None:
             if len(objects) == 0:
                 return None, 0
-            return handler(objects), len(objects)
+            return multiple_callable(objects, *extra_args), len(objects)
 
         count = 0
         self.enrich_list(objects)
         for object in objects:
             self.enrich_object(object, list=False, request=request)
             if self.find_object_action(object, method) is not None:
-                self.get_action_callable(method)(object)
+                self.get_action_callable(method)(object, *extra_args)
                 count += 1
 
         return None, count

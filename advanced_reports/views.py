@@ -131,6 +131,9 @@ def action(request, advreport, method, object_id, param=None):
 
     a = advreport.find_action(method)
 
+    if a is None:
+        raise Http404
+
     if request.method == 'POST':
         if a.form is not None:
             if issubclass(a.form, forms.ModelForm):

@@ -77,7 +77,9 @@ $(function(){
                     instance.update_checkboxes();
                 });
 
-                adv_report.find('.multiple-action-form input[type="submit"]').click(function(){
+                adv_report.find('.multiple-action-form-submit').click(function(e){
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
                     var method = $('#select-method').val();
                     if (method == '')
                         return false;
@@ -86,15 +88,20 @@ $(function(){
                         adv_report.find('.multiple-action-form').submit();
                     };
 
-                    if ($('.confirm_' + method).data('confirm'))
-                        $.mbox((_("Confirm")), $('.confirm_' + method).data('confirm'), { type: DIALOG_YES_NO, callback_closed_yes: execute});
-                    else
-                        execute();
-                    return false;
+                    var form_dialog = adv_report.find('.' + method + '_mbox');
+                    if (form_dialog.length){
+                        form_dialog.show();
+                    }else{
+                        if ($('.confirm_' + method).data('confirm'))
+                            $.mbox((_("Confirm")), $('.confirm_' + method).data('confirm'), { type: DIALOG_YES_NO, callback_closed_yes: execute});
+                        else
+                            execute();
+                    }
                 });
             },
 
             update_checkboxes: function() {
+                this.adv_report.find('.mbox_content input[name^=checkbox]').remove();
                 this.adv_report.find('.information-checkbox').each(function(){
                     var checkbox = $(this);
                     var hidden = $('#' + checkbox.attr('id').replace('checkbox_', 'hidden_checkbox_'));
@@ -205,6 +212,7 @@ $(function(){
 
                 data_row.find('a').each(function(){
                     var link = $(this);
+                    // Make sure we can click on links without funny stuff happening.
                     link.unbind().click(function(e){ e.stopPropagation(); });
                 });
 

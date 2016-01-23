@@ -140,7 +140,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         $scope.search.row_limit = $scope.row_limit;
         $scope.search.page = 1;
         $scope.fetch_report();
-    }
+    };
 
     $scope.change_order = function(order_by) {
         var ascending = $scope.report.extra.order_by != order_by || !$scope.report.extra.ascending;
