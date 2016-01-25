@@ -6,7 +6,7 @@ from django.utils.encoding import python_2_unicode_compatible
 
 @python_2_unicode_compatible
 class TodoList(models.Model):
-    owner = models.ForeignKey(User)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
 
     def __str__(self):
@@ -15,7 +15,7 @@ class TodoList(models.Model):
 
 @python_2_unicode_compatible
 class TodoItem(models.Model):
-    todo_list = models.ForeignKey(TodoList)
+    todo_list = models.ForeignKey(TodoList, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     done = models.DateTimeField(blank=True, null=True)
 
