@@ -77,6 +77,14 @@ $(function(){
                     instance.update_checkboxes();
                 });
 
+                $('body').on('keypress keyup', '.mbox_content input', function(e){
+                    var code = e.keyCode || e.which;
+                    if (code == 13) {
+                        e.preventDefault();
+                        $('.mbox_footer .btn_yes').trigger('click');
+                    }
+                });
+
                 adv_report.find('.multiple-action-form input[type="submit"]').click(function(){
                     var method = $('#select-method').val();
                     if (method == '')
