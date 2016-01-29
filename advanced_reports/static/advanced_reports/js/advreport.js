@@ -78,12 +78,16 @@ $(function(){
                 });
 
                 // workaround to fix the behaviour of enter key with modal forms.
-                // with this the form should properly be submitted
+                // with this the form should properly be submitted and it was
+                // made to be as generic as possible
                 $('body').on('keypress keyup', '.mbox_content input', function(e){
                     var code = e.keyCode || e.which;
+                    // here using two possible selectors, since mbox, so far,
+                    // it's sometimes used as an id or a class
+                    var parent_element = $(this).parents('#mbox, .mbox');
                     if (code == 13) {
                         e.preventDefault();
-                        $('.mbox_footer .btn_yes').trigger('click');
+                        parent_element.find('.mbox_footer .btn_yes').trigger('click');
                     }
                 });
 
