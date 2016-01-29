@@ -77,6 +77,8 @@ $(function(){
                     instance.update_checkboxes();
                 });
 
+                // workaround to fix the behaviour of enter key with modal forms.
+                // with this the form should properly be submitted
                 $('body').on('keypress keyup', '.mbox_content input', function(e){
                     var code = e.keyCode || e.which;
                     if (code == 13) {
