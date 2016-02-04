@@ -66,6 +66,7 @@ class AdvancedReportView(BackOfficeView):
         items = request.action_params.get('items').split(',')
         global_select = request.action_params.get('global')
         advreport = get_report_for_slug(report_slug)
+        advreport.set_request(request)
         data = request.action_params.get('data')
         advreport.set_request(request)
 

@@ -629,6 +629,12 @@ class AdvancedReport(object):
         '''
         return u''
 
+    def report_action_allowed(self, action):
+        """
+        Implement this to control whether a report action (global action) should be shown.
+        """
+        return True
+
     def auto_complete(self, request, partial, params):
         """
         Implement this to support auto completion of certain fields.
@@ -848,12 +854,15 @@ class AdvancedReport(object):
             for part in parts:
                 part_query = Q()
                 for search_field in self.search_fields:
+
                     field = self.get_model_field(search_field.split('__')[0])
                     if field is None:
                         fake_fields.append(search_field)
                     else:
                         uses_model = True
-                        if exact:
+                        if ',' in part:
+                            part_query = part_query | Q(**{'%s__in' % search_field: part.split(',')})
+                        elif exact:
                             part_query = part_query | Q(**{'%s__iexact' % search_field: part})
                         else:
                             part_query = part_query | Q(**{'%s__icontains' % search_field: part})
