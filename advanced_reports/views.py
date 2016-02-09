@@ -335,7 +335,9 @@ def api_list(request, advreport, ids=None):
             for a in advreport.item_actions \
             if _is_allowed_multiple_action(request, advreport, a)
         ],
-        'report_action_list': [_action_dict(request, None, a) for a in advreport.item_actions if a.is_report_action],
+        'report_action_list': [_action_dict(request, None, a) \
+                               for a in advreport.item_actions \
+                               if a.is_report_action and advreport.report_action_allowed(a)],
         'compact': advreport.compact,
     }
     return JSONResponse(report)

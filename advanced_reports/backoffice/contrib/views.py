@@ -66,7 +66,10 @@ class AdvancedReportView(BackOfficeView):
         items = request.action_params.get('items').split(',')
         global_select = request.action_params.get('global')
         advreport = get_report_for_slug(report_slug)
+        advreport.set_request(request)
         data = request.action_params.get('data')
+        advreport.set_request(request)
+
         if data:
             # We have to do str(data) because otherwise QueryDict is too lazy to decode...
             post = QueryDict(str(data), encoding='utf-8')
@@ -76,7 +79,6 @@ class AdvancedReportView(BackOfficeView):
             items, context = advreport.get_object_list(request)
         else:
             items = [advreport.get_item_for_id(pk) for pk in items]
-        advreport.set_request(request)
         if hasattr(advreport, '%s_multiple' % method):
             try:
                 action = advreport.find_action(method)
@@ -132,6 +134,7 @@ class AdvancedReportView(BackOfficeView):
         items = request.view_params.get('items').split(',')
         global_select = request.view_params.get('global')
         advreport = get_report_for_slug(report_slug)
+        advreport.set_request(request)
 
         if global_select == 'true':
             items = advreport.get_object_list(request)[0]
@@ -167,6 +170,7 @@ class AdvancedReportActionView(BackOfficeView):
         pk = request.view_params.get('pk')
 
         advreport = get_report_for_slug(report_slug)
+        advreport.set_request(request)
         item = advreport.get_item_for_id(pk)
         advreport.enrich_object(item, request=request)
         response = getattr(advreport, method)(item)
