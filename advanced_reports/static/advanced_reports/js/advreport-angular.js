@@ -10,6 +10,18 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
     $scope.selected = {};
     $scope.multiple_succeeded = {};
     $scope.multiple_failed = {};
+    $scope.prevent_search_trigger = false;
+
+    $scope.$watch(function(){
+        return $scope.search;
+    }, function(){
+        if (!$scope.prevent_search_trigger)
+        {
+            $scope.prevent_search_trigger = true;
+            $scope.fetch_report();
+            $scope.prevent_search_trigger = false;
+        }
+    }, true);
 
     $scope.$watch(function(){
         return $location.search();
@@ -17,7 +29,6 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         if ($scope.view.params.updateLocation)
         {
             $scope.search = search;
-            $scope.fetch_report();
         }
     }, true);
 
@@ -60,6 +71,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
             angular.forEach($scope.report.multiple_action_list, function(value){
                 $scope.multiple_action_dict[value.method] = value;
             });
+            $scope.$broadcast('reportPageLoad', $scope.view.params.slug);
         }, function(error){
             $scope.error = error;
         });
@@ -84,7 +96,6 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         if (page < 1 || page > $scope.page_count || $scope.search.page == page)
             return;
         $scope.search.page = page;
-        $scope.fetch_report();
     };
 
     $scope.has_expanded_content = function(item){
@@ -136,17 +147,15 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         return boUtils.keyCount($scope.selected);
     };
 
-    $scope.change_row_limit = function() {
+    $scope.change_row_limit = function(){
         $scope.search.row_limit = $scope.row_limit;
         $scope.search.page = 1;
-        $scope.fetch_report();
     };
 
     $scope.change_order = function(order_by) {
         var ascending = $scope.report.extra.order_by != order_by || !$scope.report.extra.ascending;
         $scope.search.order = (ascending ? '' : '-') + order_by;
         $scope.search.page = 1;
-        $scope.fetch_report();
     };
 
     $scope.has_applied_filters = function() {
@@ -162,7 +171,6 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         for (var k in $scope.filters)
             $scope.search[k] = $scope.filters[k];
         $scope.search.page = 1;
-        $scope.fetch_report();
     };
 
     $scope.remove_filters = function() {
@@ -170,7 +178,6 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         $scope.filter = {};
         $scope.search = {order: $scope.search.order, page: 1};
         $scope.row_limit = $scope.row_limit_choices[0];
-        $scope.fetch_report();
     };
 
     $scope.update_item = function(item, data, expand_next) {
@@ -228,6 +235,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         var action = $scope.multiple_action_dict[$scope.multiple_action];
         var action_params = $scope.multiple_action_params(action.method);
         action_params = angular.extend(action_params, data || {});
+        action_params = angular.extend(action_params, $scope.search);
         
         if ($scope.is_link_action(action) && !action.form){
             $scope.multiple_action = '';
@@ -283,7 +291,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
                 if (action.confirm && !force){
                     $scope.action_confirm_popup.modal('hide');
                 }
-                $scope.view.action('action', {method: action.method, pk: item.item_id}, false).then(function(data){
+                $scope.view.action('action', {method: action.method, pk: item && item.item_id}, false).then(function(data){
                     $scope.handle_action_response(data, item, action);
                 }, $scope.handle_action_error);
             };

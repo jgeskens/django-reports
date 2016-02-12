@@ -1,8 +1,8 @@
 var app = angular.module('BackOfficeApp', ['ngCookies']);
 
-app.run(function ($http, $cookies){
+app.run(['$http', '$cookies', function ($http, $cookies){
     $http.defaults.headers.common['X-CSRFToken'] = $cookies['csrftoken'];
-});
+}]);
 
 app.config(['$routeProvider', '$locationProvider', function($routeProvider, $locationProvider){
     $routeProvider.
@@ -259,6 +259,10 @@ function($scope, $http, $location, boApi, $route, $parse, $q, boReverser){
         };
     };
 
+    $scope.gotoUrl = function(url){
+        window.location.href = url;
+    };
+
     $scope.broadcast = function(event){
         return function(){
             $scope.$broadcast(event);
@@ -366,7 +370,7 @@ app.directive('view', ['$compile', '$q', 'boApi', 'boUtils', '$timeout', '$parse
             delete attrs['params'];
             params.view_slug = slug;
             for (var k in attrs){
-                if (attrs.hasOwnProperty(k)){
+                if (attrs.hasOwnProperty(k) && !boUtils.startsWith(k, '$')){
                     if (boUtils.startsWith(k, 'eval')){
                         var new_k = k.substring(4).toLowerCase();
                         params[new_k] = scope.$eval(attrs[k]);
