@@ -147,7 +147,7 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         return boUtils.keyCount($scope.selected);
     };
 
-    $scope.change_row_limit = function() {
+    $scope.change_row_limit = function(){
         $scope.search.row_limit = $scope.row_limit;
         $scope.search.page = 1;
     };
