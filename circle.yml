@@ -3,6 +3,7 @@ general:
 test:
     override:
         - cd ..; python setup.py develop
+        - pip install mock==1.3.0
         - cd ..; python advreport_test_project/manage.py test
 deployment:
     polishing:
