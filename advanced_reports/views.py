@@ -131,6 +131,9 @@ def action(request, advreport, method, object_id, param=None):
 
     a = advreport.find_action(method)
 
+    if a is None:
+        raise Http404
+
     if request.method == 'POST':
         if a.form is not None:
             if issubclass(a.form, forms.ModelForm):
@@ -224,7 +227,8 @@ def ajax_form(request, advreport, method, object_id, param=None):
         a = a.copy_with_instanced_form(advreport,
                                        prefix=object_id,
                                        instance=a.get_form_instance(object, param=param),
-                                       data=request.POST)
+                                       data=request.POST,
+                                       files=request.FILES)
         form = a.form
         if form.is_valid():
             r = advreport.get_action_callable(a.method)(object, form)
@@ -416,4 +420,3 @@ def api_action(request, advreport, method, object_id=None):
 
     # Done!
     return JSONResponse(reply)
-

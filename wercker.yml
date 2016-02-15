@@ -26,6 +26,7 @@ build:
         - script:
             name: build
             code: |
+                pip install mock==1.3.0
                 python setup.py develop
                 python advreport_test_project/manage.py test
 deploy:

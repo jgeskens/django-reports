@@ -139,23 +139,68 @@
                 <tr>
                     <th>{% trans "With selected" %}:</th>
                     <td>
+                        {# Hidden list of checkbox values #}
                         {% for object in paginated.object_list %}
                         <input type="hidden" name="checkbox_{{ forloop.counter|stringformat:"09d" }}_{{ object.advreport_object_id }}" id="hidden_checkbox_{{ object.advreport_object_id }}" value="false" />
                         {% endfor %}
+
+                        {# Confirmation dialogs #}
                         {% for action in advreport.item_actions %}
                             {% if not action.form and action.confirm and not action.hidden and action.multiple_display %}
                                 <span style="display: none;" class="confirm_{{ action.method }}" data-confirm="{% blocktrans with action.verbose_name as action_name and advreport.verbose_name_plural as items %}{{ action_name }}: Are you sure you want to execute this on the selected {{ items }}?{% endblocktrans %}"></span>
                             {% endif %}
                         {% endfor %}
+
+                        {# Select tag with actions applicable to multiple items #}
                         <select id="select-method" name="method">
                             <option value="" selected="selected">--</option>
                             {% for action in advreport.item_actions %}
-                                {% if not action.form and not action.hidden and action.multiple_display %}
+                                {% if action.suitable_for_multiple %}
                                     <option value="{{ action.method }}">{{ action.verbose_name }}</option>
                                 {% endif %}
                             {% endfor %}
                         </select>
-                        <input type="submit" value="{% trans "Go" %}"/>
+
+                        {% for action in advreport.item_actions %}
+                            {% with rendered_form=action.render_multiple_form %}
+                            {% if rendered_form and not action.hidden and action.multiple_display %}
+                                <div class="mbox_overlay {{ action.method }}_mbox"></div>
+                                <div class="mbox_wrap {{ action.method }}_mbox" style="display:none; position: fixed; width: 600px;">
+                                    <div class="mbox">
+                                        <table class="mbox_table">
+                                            <tr>
+                                                <td class="mbox_tl"></td>
+                                                <td class="mbox_t"></td>
+                                                <td class="mbox_tr"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="mbox_l"></td>
+                                                <td class="mbox_body">
+                                                    <div class="mbox_title">{{ action.verbose_name }}</div>
+                                                    <div class="mbox_content">
+                                                        {{ rendered_form|safe }}
+                                                    </div>
+                                                    <div class="mbox_footer">
+                                                        <input value="{% trans "Cancel" %}" type="button" class="button"
+                                                               onclick="$('.{{ action.method }}_mbox').hide(); return false;"/>
+                                                        <input class="button" type="submit" value="{{ action.submit|default:_('Submit') }}"/>
+                                                    </div>
+                                                </td>
+                                                <td class="mbox_r"></td>
+                                            </tr>
+                                            <tr>
+                                                <td class="mbox_bl"></td>
+                                                <td class="mbox_b"></td>
+                                                <td class="mbox_br"></td>
+                                            </tr>
+                                       </table>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            {% endwith %}
+                        {% endfor %}
+
+                        <input class="multiple-action-form-submit" type="submit" value="{% trans "Go" %}"/>
                     </td>
                 </tr>
             </table>
