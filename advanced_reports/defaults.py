@@ -807,11 +807,14 @@ class AdvancedReport(object):
         But we need to be sure that we can filter on these fields so we check if there is no filter_* function defined
         in advanced report definition
         """
+        # WSGIRequest.REQUEST (a merge of POST and GET) is no longer available as of Django 1.9
+        request_querydict = request.POST if request.method == 'POST' else request.GET
         result = {}
+
         for filter_field in self.filter_fields:
-            if filter_field in request.REQUEST and request.REQUEST[filter_field].strip() and \
+            if filter_field in request_querydict and request_querydict[filter_field].strip() and \
                     not hasattr(self, 'filter_%s' % filter_field):
-                result[filter_field] = request.REQUEST[filter_field]
+                result[filter_field] = request_querydict[filter_field]
         return result
 
     def get_filtered_items(self, queryset, params, request=None):
