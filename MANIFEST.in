@@ -1,5 +1,5 @@
 include README.rst
 include LICENSE.txt
 include CHANGELOG.rst
-recursive-include advanced_reports *.html *.png *.gif *js *.css *jpg *jpeg *svg *py
+recursive-include advanced_reports *.html *.png *.gif *js *.css *jpg *jpeg *svg *py *.eot *.woff *.svg *.ttf
 recursive-include advreport_test_project *.html *.png *.gif *js *.css *jpg *jpeg *svg *py
