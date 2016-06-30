@@ -41,7 +41,7 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
     if request.method == 'POST':
         sorted_keys = [k for k in request.POST.keys()]
         sorted_keys.sort()
-        selected_object_ids = [k.split('_')[2] for k in sorted_keys if 'checkbox_' in k and request.POST[k] == 'true']
+        selected_object_ids = [k.split('_')[2] for k in sorted_keys if 'checkbox_' in k and 'true' in request.POST.getlist(k)]
         method = request.POST['method']
 
         if not method:
