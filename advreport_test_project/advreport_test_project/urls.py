@@ -11,7 +11,7 @@ admin.autodiscover()
 
 urlpatterns = patterns('',
     url(r'^$', RedirectView.as_view(url='/todos-backoffice/'), name='home'),
-    url(r'^admin/', include(admin.site.urls)),
+    url(r'^admin/', admin.site.urls),
     url(r'^test-backoffice/', include(test_backoffice.urls)),
     url(r'^todos-backoffice/', include(todos_backoffice.urls)),
     url(r'^reports/', include('advanced_reports.urls')),
