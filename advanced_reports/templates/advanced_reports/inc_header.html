@@ -99,12 +99,14 @@
                                 <a href=".">{% trans "show all" %}</a>
                             {% endif %}
                         </td>
-                        {% if not advreport.filter_fields %}
+                    </tr>
+                    {% if not advreport.filter_fields %}
+                    <tr>
                         <td>
                             <input type="submit" value="{% trans "Search" %}" />
                         </td>
-                        {% endif %}
                     </tr>
+                    {% endif %}
                 </table>
             </div>
         {% endif %}
