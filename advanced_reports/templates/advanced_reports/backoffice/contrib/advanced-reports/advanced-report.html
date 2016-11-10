@@ -125,12 +125,14 @@
             </div>
         </form>
 
+        {% if report.show_row_limit_selection %}
         <form class="form-inline col-lg-4 col-md-5 col-sm-6" role="form">
             <div class="form-group pull-right">
                 <select class="form-control" ng-options="value for value in row_limit_choices" ng-model="row_limit" ng-change="change_row_limit()">
                 </select>
             </div>
         </form>
+        {% endif %}
 
         <div class="col-lg-4 col-md-5 col-sm-6 align-right">
             <form ng-submit="execute_multiple_action()" class="form-inline" role="form" ng-show="show_action_select()">
