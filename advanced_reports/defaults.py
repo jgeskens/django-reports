@@ -438,6 +438,9 @@ class AdvancedReport(object):
     #: Also the show details / hide details link will disappear.
     compact = False
 
+    #: Shows an optional row limit selection box
+    show_row_limit_selection = False
+
 
     def __init__(self, *args, **kwargs):
         self.model_admin = None
@@ -815,6 +818,7 @@ class AdvancedReport(object):
             if filter_field in request_querydict and request_querydict[filter_field].strip() and \
                     not hasattr(self, 'filter_%s' % filter_field):
                 result[filter_field] = request_querydict[filter_field]
+
         return result
 
     def get_filtered_items(self, queryset, params, request=None):
