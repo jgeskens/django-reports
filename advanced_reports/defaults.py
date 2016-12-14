@@ -1,5 +1,6 @@
 import datetime
 import time
+import urllib
 from collections import OrderedDict
 
 from django import forms
@@ -331,6 +332,14 @@ class AdvancedReport(object):
     #:     - ``images`` (optional): `default` will be used for all other fields, use same name as defined in `types` to
     #:        provide a `type` specific image.
     tabbed_filter_fields = ()
+
+    #: Optional.
+    # A list of fields for which all values will be shown, so that the user can choose to hide or select all records
+    # with that value for field.
+    # E.g. if I have a field X and it has values A and B, 'X' should be added to 'value_selection_filter_fields'.
+    # The user will have the option to show only records with value 'A' or only records with value 'B', none or both.
+    # Typically this will be rendered as checkbuttons or something similar
+    value_selection_filter_fields = ()
 
     #: Optional. A mapping of filter fields to their list of values.
     filter_values = {}
@@ -969,6 +978,73 @@ class AdvancedReport(object):
         return EnrichedQueryset(queryset, self)
 
     def get_object_list(self, request, ids=None):
+        """Returns all the objects in the report.
+
+        A second return value is extra context for rendering the template."""
+
+        def _apply_value_selection_filter_fields(queryset):
+            """Does the necessary changes to queryset and context for value_selection_filter_fields.
+
+            Does this by returning a new queryset and a context that can be used to update the existing context
+            @return: (new_queryset, new_context)
+                     'new_queryset' has the objects removed that should not be seen.
+                     'new_context' the values that should be added to the context.
+                                   it will contain one entry with key 'value_selection_filter_fields'.
+                                   an example describes best what it will contain:
+                                   {
+                                       'value_selection_filter_fields: {
+                                           'field1': {
+                                               'verbose_name': 'Field1_user_friendly_name',
+                                               'values': [
+                                                   {
+                                                       'verbose_name': 'valueA',
+                                                       'url_to_toggle': <the url to follow to bring you to the page with the toggled content>
+                                                       'active': 'False'
+
+            @param(queryset): the queryset of objects that need to be returned. Is needed for two purposes:
+                              - to check which values exist for a certain field so we can present them for show or hide.
+                              - to filter out the objects that should not be shown.
+            """
+            if self.value_selection_filter_fields:
+                # Filtering on value_selection_filter_fields can only happen after we know the objects
+                # since the possible values of the fields are the actual values of the objects
+                tmp_object_list = self.get_filtered_items(queryset, request.GET, request=request)
+
+                context_value = {}
+                for value_selection_filter_field in self.value_selection_filter_fields:
+                    context_value[value_selection_filter_field] \
+                        = {'verbose_name': self.get_field_metadata(value_selection_filter_field)['verbose_name'],
+                           'values': []}
+
+                    available_values = set()
+                    for obj in tmp_object_list:
+                        value = getattr(obj, value_selection_filter_field)
+                        verbose_value = self.get_item_html(value_selection_filter_field, obj)
+                        available_values.add((value, verbose_value))
+
+                    values_to_show = []
+                    for available_value, verbose_available_value in available_values:
+                        value_key = 'value_selection_filter_field_{}_{}'.format(value_selection_filter_field,
+                                                                                available_value)
+
+                        url_parameters_for_the_toggle_link = request.GET.copy()
+                        url_parameters_for_the_toggle_link[value_key] \
+                            = 'hide' if request.GET.get(value_key, 'show') != 'hide' else 'show'
+
+                        show_value = False
+                        if request.GET.get(value_key, 'show') != 'hide':
+                            values_to_show.append(available_value)
+                            show_value = True
+
+                        context_value[value_selection_filter_field]['values'] \
+                            .append({'verbose_name': verbose_available_value,
+                                     'url_to_toggle': urllib.urlencode(url_parameters_for_the_toggle_link),
+                                     'active': show_value})
+
+                    queryset = queryset.filter(**{'{}__in'.format(value_selection_filter_field): values_to_show})
+
+            return queryset, {'value_selection_filter_fields': context_value}
+
         default_order_by = ''.join(self.sortable_fields[:1])
         order_by = request.GET.get('order', default_order_by)
         context = {}
@@ -986,6 +1062,10 @@ class AdvancedReport(object):
         # Filter
         if ids is not None:
             queryset = queryset.filter(pk__in=ids)
+
+        queryset, new_context = _apply_value_selection_filter_fields(queryset)
+        context.update(new_context)
+
         object_list = self.get_filtered_items(queryset, request.GET, request=request)
 
         return object_list, context
