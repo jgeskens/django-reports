@@ -1043,7 +1043,9 @@ class AdvancedReport(object):
 
                     queryset = queryset.filter(**{'{}__in'.format(value_selection_filter_field): values_to_show})
 
-            return queryset, {'value_selection_filter_fields': context_value}
+                return queryset, {'value_selection_filter_fields': context_value}
+
+            return queryset, {}
 
         default_order_by = ''.join(self.sortable_fields[:1])
         order_by = request.GET.get('order', default_order_by)
