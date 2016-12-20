@@ -45,6 +45,17 @@
 </div>
 {% endif %}
 
+{% if value_selection_filter_fields %}
+    <div class="navbar">
+        {% for value_selection_filter_field, field_info in value_selection_filter_fields.items %}
+            Filter on values for '{{ field_info.verbose_name }}':
+            {% for value_info in field_info.values %}
+                <a class="btn {% if value_info.active %}active{% endif %}" href="?{{ value_info.url_to_toggle }}">{{ value_info.verbose_name }}</a>
+            {% endfor %}
+        {% endfor %}
+    </div>
+{% endif %}
+
 {% if advreport.search_fields or advreport.filter_fields or advreport.tabbed_filter_fields %}
 
     <form method="get" action="{{ request.path }}">
