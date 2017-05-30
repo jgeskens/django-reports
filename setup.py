@@ -9,7 +9,8 @@ setup(
     license='BSD',
     description="Advanced reports for Django",
     long_description=open('README.rst', 'r').read(),
-    author='Jef Geskens, VikingCo nv',
+    author='Jef Geskens, Unleashed NV',
+    author_email='operations@unleashed.be',
     packages=find_packages('.'),
     package_data = {'advanced_reports': [
                 'static/*.js', 'static/*/*.js', 'static/*/*/*.js',
