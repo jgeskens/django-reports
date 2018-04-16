@@ -1,19 +1,20 @@
+from __future__ import unicode_literals
+
 import datetime
 import time
-import urllib
 from collections import OrderedDict
 
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.contenttypes.models import ContentType
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.http.response import Http404
-from django.template.context import RequestContext
 from django.template.defaultfilters import capfirst
 from django.template.loader import render_to_string
+from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags, escape
 from django.utils.translation import ugettext_lazy as _
@@ -41,7 +42,7 @@ class action(object):
 
     #: Required. This is what the user will see in the frontend. If your action is simple (as in, it has no form), this
     #: will be the name of the web link. If your action uses a form, this will be a title that will be placed before it.
-    #: If you don't want to display that, just use u''.
+    #: If you don't want to display that, just use ''.
     verbose_name = None
 
     #: Optional. This will be used as the success message when your action has successfully executed.
@@ -89,7 +90,7 @@ class action(object):
     link_via_ajax = False
 
     #: Required when using form. This is the value of your submit button when using forms.
-    submit = u'Submit'
+    submit = 'Submit'
 
     #: Optional. If True, the submit button will be shown. The hiding of the submit button only works
     #: when the template supports this.
@@ -166,36 +167,42 @@ class action(object):
             setattr(self, k, kwargs[k])
             self.attrs_dict[k] = kwargs[k]
 
+    def instantiate_form(self, advreport,  prefix, instance=None, data=None, files=None):
+        dynamic_form = getattr(advreport, 'get_{}_form'.format(self.method), None)
+        if dynamic_form is not None:
+            return dynamic_form(instance, prefix, data=data, files=files)
+        elif self.form is not None:
+            if issubclass(self.form, forms.ModelForm):
+                return self.form(data=data, files=files, prefix=prefix, instance=instance)
+            else:
+                return self.form(data=data, files=files, prefix=prefix)
+        return None
+
     def copy_with_instanced_form(self, advreport, prefix, instance=None, data=None, files=None):
         new_action = action(**self.attrs_dict)
-        dynamic_form = getattr(advreport, 'get_%s_form' % new_action.method, None)
-
-        if dynamic_form is not None and callable(dynamic_form):
-            new_action.form = dynamic_form(instance, prefix, data=data)
-
-        elif self.form is not None:
-            new_action.form = self.form
-            if issubclass(self.form, forms.ModelForm):
-                new_action.form = self.form(data=data, files=files, prefix=prefix, instance=instance)
-            else:
-                new_action.form = self.form(data=data, files=files, prefix=prefix)
+        new_action.form = self.instantiate_form(advreport, prefix, instance=instance, data=data, files=files)
 
         if new_action.form is not None:
             new_action.form_template = self.form_template
             if self.form_template:
-                new_action.response_form_template = mark_safe(render_to_string(self.form_template, {'form': new_action.form, 'item': instance}))
+                new_action.response_form_template = mark_safe(
+                    render_to_string(self.form_template, {'form': new_action.form, 'item': instance})
+                )
 
         if instance:
             context = {'item': instance}
             context.update(instance.__dict__)
-            if new_action.confirm: new_action.confirm = new_action.confirm % Resolver(context)
-            if new_action.success: new_action.success = new_action.success % Resolver(context)
-            if new_action.verbose_name: new_action.verbose_name = new_action.verbose_name % Resolver(context)
+            if new_action.confirm:
+                new_action.confirm = new_action.confirm % Resolver(context)
+            if new_action.success:
+                new_action.success = new_action.success % Resolver(context)
+            if new_action.verbose_name:
+                new_action.verbose_name = new_action.verbose_name % Resolver(context)
 
         return new_action
 
     def get_success_message(self):
-        return self.success or _(u'Successfully executed "%s"') % self.verbose_name
+        return self.success or _('Successfully executed "%s"') % self.verbose_name
 
     def get_form_instance(self, instance, *args, **kwargs):
         if not instance:
@@ -212,22 +219,21 @@ class action(object):
                 else self.form_instance
         return instance
 
-    def get_bound_form(self, request, instance, prefix):
+    def get_bound_form(self, advreport, request, instance, prefix):
         if self.form is None:
             return None
-        kwargs = {}
         instance = self.get_form_instance(instance)
-        if instance:
-            kwargs['instance'] = instance
         if request.method == 'GET':
-            return self.form(request.GET, prefix=prefix, **kwargs)
-        return self.form(request.POST, request.FILES, prefix=prefix, **kwargs)
+            # return self.form(request.GET, prefix=prefix, **kwargs)
+            return self.instantiate_form(advreport, prefix, instance=instance, data=request.GET)
+        # return self.form(request.POST, request.FILES, prefix=prefix, **kwargs)
+        return self.instantiate_form(advreport, prefix, instance=instance, data=request.POST, files=request.FILES)
 
     def render_form(self, request, instance, form):
         if self.form_template:
             return render_to_string(self.form_template,
                                     {'form': form, 'item': instance},
-                                    context_instance=RequestContext(request))
+                                    request=request)
         return six.text_type(form)
 
 
@@ -292,16 +298,16 @@ class action(object):
         return decorator
 
 
-class ActionException:
+class ActionException(BaseException):
     def __init__(self, msg=None, form=None):
         if form is not None:
-            msg = u''
+            msg = ''
             for k in form.errors.keys():
                 for e in form.errors[k]:
-                    msg += u' ' + e
+                    msg += ' ' + e
             self.msg = msg
         else:
-            self.msg = u'%s' % msg
+            self.msg = '%s' % msg
 
 
 class AdvancedReport(object):
@@ -372,7 +378,6 @@ class AdvancedReport(object):
     #: of items, your report will be paginated. By default this is 20.
     items_per_page = 20
 
-
     #: Optional. A tuple of link tuples. You can define some top level links for your report.
     #: A link tuple must contain two items, the name of the link and the href location.
     #: Optionally you can show some more information if you add a third item to the link tuple with
@@ -380,8 +385,8 @@ class AdvancedReport(object):
     #: Example::
     #:
     #:     links = (
-    #:         (u'Print this page', 'javascript:printPage();', u'Click here to print this page'),
-    #:         (u'Refresh', '.'),
+    #:         ('Print this page', 'javascript:printPage();', 'Click here to print this page'),
+    #:         ('Refresh', '.'),
     #:     )
     links = ()
 
@@ -450,7 +455,6 @@ class AdvancedReport(object):
     #: Shows an optional row limit selection box
     show_row_limit_selection = False
 
-
     def __init__(self, *args, **kwargs):
         self.model_admin = None
 
@@ -512,22 +516,22 @@ class AdvancedReport(object):
         return None
 
     def get_FOO_verbose_name(self):
-        '''
+        """
         Implement this function to specify the column header for the field FOO.
-        '''
+        """
         return None
 
     def get_FOO_html(self):
-        '''
+        """
         Implement this function to specify the HTML representation for the field FOO.
-        '''
+        """
         return None
 
-    def get_FOO_decorator(self):
-        '''
+    def get_FOO_decorator(self, _):
+        """
         Implement this function to specify a decorator function for the field FOO.
         Return a function that accepts one parameter and returns the decorated html.
-        '''
+        """
         return lambda s: s
 
     def filter_FOO(self, qs, value):
@@ -540,19 +544,19 @@ class AdvancedReport(object):
         return qs
 
     def verify_action_group(self, item, group):
-        '''
+        """
         Implement this function to verify if the given group currently applies to the given item.
 
         For example, if the item is a paid purchase and the group is "paid", we must return True.
         To turn of filtering of actions by groups, just don't specify the group when creating an
         action and just leave this function alone.
-        '''
+        """
         return True
 
     def set_request(self, request):
-        '''
+        """
         Set the request for this report.
-        '''
+        """
         self.request = request
 
     #
@@ -562,50 +566,50 @@ class AdvancedReport(object):
     #
 
     def get_item_id(self, item):
-        '''
+        """
         Advanced Reports expects each item to have a unique ID. By default this is the primary key
         of a model instance, but this can be anything you want, as long it is a unicode string.
-        '''
-        return unicode(item.pk)
+        """
+        return six.text_type(item.pk)
 
     def get_item_for_id(self, item_id):
-        '''
+        """
         Advanced Reports also expects each item to be found by its unique ID. By default it does
         a lookup of the primary key of a model.
 
         Returns None if the item does not exist.
-        '''
+        """
         try:
             return self._queryset(request=None).get(pk=item_id)
-        except ObjectDoesNotExist, e:
+        except ObjectDoesNotExist:
             return None
 
     def get_decorator(self):
-        '''
+        """
         To be used in tandem with decorate_views. Set it to True when you want to implement this function.
         Here you can return a decorator. That decorator will be used to decorate the Advanced Report views.
         This way you can easily add some permission restrictions to your reports.
-        '''
+        """
         return None
 
     def FOO(self, item, form=None):
-        '''
+        """
         The implementation of the FOO action method.
-        '''
+        """
 
     def FOO_view(self, item, form=None):
-        '''
+        """
         The implementation of the FOO action method that can return a HttpResponse
-        '''
+        """
 
     def FOO_multiple(self, items):
-        '''
+        """
         The implementation of the FOO action method with multiple items.
         This may return a HttpResponse object or just None.
-        '''
+        """
         return None
 
-    def get_FOO_form(self, item, prefix, data=None):
+    def get_FOO_form(self, item, prefix, data=None, files=None):
         """
         Instead of specifying the ``form`` attribute for an action, you can also construct your
         action form instance dynamically by implementing this method in your report.
@@ -617,19 +621,19 @@ class AdvancedReport(object):
         return None
 
     def get_item_class(self, item):
-        '''
+        """
         Implement this to get some extra CSS classes for the item. Separate them with spaces.
-        '''
-        return u''
+        """
+        return ''
 
     def get_FOO_class(self, item):
-        '''
+        """
         Implement this to get some extra CSS classes for the field FOO. Separate them with spaces.
-        '''
-        return u''
+        """
+        return ''
 
     def get_extra_information(self, item):
-        '''
+        """
         Implement this to get some extra information about an item.
         This will be shown right below a data row and above the actions.
 
@@ -641,25 +645,25 @@ class AdvancedReport(object):
         Example::
 
             def get_extra_information(self, item):
-                return u'<div class="lazy" data-method="credit_view"></div>'
+                return '<div class="lazy" data-method="credit_view"></div>'
 
             item_actions = (
-                action(method='credit_view', verbose_name=u'', group='mygroup', hidden=True),
+                action(method='credit_view', verbose_name='', group='mygroup', hidden=True),
             )
 
             def credit_view(self, item):
                 balance = get_credit_balance(item)
                 return render_to_response('credit_template.html', {'balance': balance})
 
-        '''
-        return u''
+        """
+        return ''
 
     def get_FOO_style(self):
-        '''
+        """
         Implement this to apply some CSS to the FOO td table cell.
         For example, you can define a fixed width here.
-        '''
-        return u''
+        """
+        return ''
 
     def report_action_allowed(self, action):
         """
@@ -679,26 +683,26 @@ class AdvancedReport(object):
         return []
 
     def enrich_list(self, items):
-        '''
+        """
         Implement this to attach some extra information to each item of the given items list.
 
         Use self.assign_attr(item, attr_name, value) to do that, it automatically detects dicts.
 
         Example usage: adding state information to each item to prevent multiple queries to the State model.
-        '''
+        """
         pass
 
     def get_item_count(self):
-        '''
+        """
         Implement this if you don't use Django model instances.
         Returns the number of items in the report.
-        '''
+        """
         return self._queryset(request=None).count()
 
     def get_template(self):
-        '''
+        """
         Get the template that needs to be rendered
-        '''
+        """
         if self.internal_mode:
             if self.internal_template:
                 return self.internal_template
@@ -714,16 +718,16 @@ class AdvancedReport(object):
         return context
 
     def extra_context(self):
-        '''
+        """
         (deprecated) Implement this to define some extra context for your template.
-        '''
+        """
         return {}
 
     def extra_context_request(self, request=None):
-        '''
+        """
         Implement this to define some extra context for your template,
         based on the request.
-        '''
+        """
         filter_form = self.get_filter_form()
         if filter_form is not None:
             filter_form = filter_form(request.GET or None)
@@ -910,7 +914,7 @@ class AdvancedReport(object):
             self.enrich_list(queryset)
             for fake_field in fake_fields:
                 for o in queryset:
-                    test_string = strip_tags(self.get_item_html(fake_field, o)).lower().replace(u'&nbsp;', u' ')
+                    test_string = strip_tags(self.get_item_html(fake_field, o)).lower().replace('&nbsp;', ' ')
                     if q == test_string if exact else q in test_string:
                         fake_found.append(int(o.pk) if uses_model else o)
 
@@ -931,38 +935,39 @@ class AdvancedReport(object):
             return EnrichedQueryset(fake_found, self, request=request)
 
     def _queryset(self, request):
-        if hasattr(self, 'queryset_request'):
-            qs = self.queryset_request(request)
-            if request:
-                def convert_value(k, v):
-                    if k[-4:] == '__in':
-                        return v.split(',')
-                    if v.lower() == u'true':
-                        return True
-                    elif v.lower() == u'false':
-                        return False
-                    else:
-                        return v
+        qs = self.queryset()
+        if self.request:
+            def convert_value(k, v):
+                if k[-4:] == '__in':
+                    return v.split(',')
+                if v.lower() == 'true':
+                    return True
+                elif v.lower() == 'false':
+                    return False
+                else:
+                    return v
 
-                if self.models:
-                    fieldnames = [f.name for f in self.models[0]._meta.fields]
-                    lookup = dict((k, convert_value(k, v)) for k, v in request.GET.items() if v and k.split('__')[0] in fieldnames)
+            if self.models:
+                fieldnames = [f.name for f in self.models[0]._meta.get_fields()]
+                lookup = dict(
+                    (k, convert_value(k, v))
+                    for k, v in self.request.GET.items()
+                    if v and k.split('__')[0] in fieldnames
+                )
 
-                    lookup_id = lookup.get('id')
-                    if lookup_id and not lookup_id.isdigit():
-                        raise Http404
+                lookup_id = lookup.get('id')
+                if lookup_id and not lookup_id.isdigit():
+                    raise Http404
 
-                    if lookup:
-                        qs = qs.filter(**lookup)
+                if lookup:
+                    qs = qs.filter(**lookup)
 
-                    for k, v in request.GET.items():
-                        filter_fn = getattr(self, 'filter_%s' % k, None)
-                        if filter_fn and v:
-                            qs = filter_fn(qs, convert_value(k, v))
+                for k, v in self.request.GET.items():
+                    filter_fn = getattr(self, 'filter_%s' % k, None)
+                    if filter_fn and v:
+                        qs = filter_fn(qs, convert_value(k, v))
 
-            return qs
-        else:
-            return self.queryset()
+        return qs
 
     def get_sorted_queryset(self, by_field, request=None):
         if by_field not in ('__str__', '__unicode__'):
@@ -1038,7 +1043,7 @@ class AdvancedReport(object):
 
                         context_value[value_selection_filter_field]['values'] \
                             .append({'verbose_name': verbose_available_value,
-                                     'url_to_toggle': urllib.urlencode(url_parameters_for_the_toggle_link),
+                                     'url_to_toggle': urlencode(url_parameters_for_the_toggle_link),
                                      'active': show_value})
 
                     queryset = queryset.filter(**{'{}__in'.format(value_selection_filter_field): values_to_show})
@@ -1074,10 +1079,10 @@ class AdvancedReport(object):
 
     def get_ordered_by(self, by_field):
         if by_field == '':
-            return u''
+            return ''
         field_names = (part.strip('-') for part in by_field.split(','))
         verbose_names = (self.get_field_metadata(field_name)['verbose_name'] for field_name in field_names)
-        return u', '.join(verbose_names)
+        return ', '.join(verbose_names)
 
     def get_action_callable(self, method):
         return getattr(self, method, lambda i, f=None: False)
@@ -1105,9 +1110,9 @@ class AdvancedReport(object):
             if not bound_form.is_valid():
                 messages.error(
                     request,
-                    u'{} {}'.format(
+                    '{} {}'.format(
                         _('The submitted form was not valid, so no action was taken.'),
-                        u', '.join(u'{}: {}'.format(field, error)
+                        ', '.join('{}: {}'.format(field, error)
                                    for field, errors in bound_form.errors.items()
                                    for error in errors)
                     )
@@ -1139,13 +1144,13 @@ class AdvancedReport(object):
         if not self.search_fields:
             return None
         field_names = (s.rsplit('__', 1)[-1] for s in self.search_fields)
-        field_names = u', '.join(self.get_field_metadata(field_name)['verbose_name'] for field_name in field_names)
-        return _(u'You can search by %(fields)s') % {'fields': field_names}
+        field_names = ', '.join(self.get_field_metadata(field_name)['verbose_name'] for field_name in field_names)
+        return _('You can search by %(fields)s') % {'fields': field_names}
 
     def get_column_values(self, item):
         for field_name in self.fields:
             yield {'html': self.get_item_html(field_name, item),
-                   'class': getattr(self, 'get_%s_class' % field_name, lambda i: u'')(item),
+                   'class': getattr(self, 'get_%s_class' % field_name, lambda i: '')(item),
                    'style': getattr(self, 'get_%s_style' % field_name, lambda: None)()}
 
     def get_model_field(self, field_name):
@@ -1154,8 +1159,8 @@ class AdvancedReport(object):
 
         for model in self.models:
             try:
-                return model._meta.get_field_by_name(field_name)[0]
-            except:
+                return model._meta.get_field(field_name)
+            except FieldDoesNotExist:
                 pass
         return None
 
@@ -1171,7 +1176,7 @@ class AdvancedReport(object):
                 verbose_name = model_field.verbose_name
 
         if verbose_name is None:
-            verbose_name = capfirst(field_name.replace(u'_', u' '))
+            verbose_name = capfirst(field_name.replace('_', ' '))
 
         sortable = False
         order_by = ''
@@ -1220,14 +1225,14 @@ class AdvancedReport(object):
         return EnrichedQueryset(self._queryset(request), self)
 
     def enrich_object(self, o, list=True, request=None):
-        '''
+        """
         This method adds extra metadata to an item.
         When the list argument is True, enrich_list will be called on the item.
         When calling this method multiple times, it is inefficient to call enrich_list,
         as it can be run once on the whole list, so in this case set list to False.
         If supplied, the request will be attached to the item so that you can use this
         in your actions.
-        '''
+        """
         if not o:
             return
 
@@ -1242,7 +1247,7 @@ class AdvancedReport(object):
         self.assign_attr(o, 'advreport_extra_information', self.get_extra_information(o) % Resolver({'item': o}))
 
     def enrich_generic_relation(self, items, our_model, foreign_model, attr_name, fallback):
-        '''
+        """
         This is a utility method that can be used to prefetch backwards generic foreign key relations.
         Use this if you have a lot of lookups of this kind when generating the report.
 
@@ -1253,7 +1258,7 @@ class AdvancedReport(object):
             - attr_name: specifies name of the attribute that will contain an instance of foreign_model.
             - fallback: a function that will be called when the backwards relation was not found.
               It must accept a our_model instance and must return a foreign_model instance.
-        '''
+        """
         ct = ContentType.objects.get_for_model(our_model)
         pks = [item.pk for item in items]
         foreigns = foreign_model.objects.filter(content_type=ct, object_id__in=pks).select_related('content_type')
@@ -1266,7 +1271,7 @@ class AdvancedReport(object):
     def enrich_backward_relation(self, items, foreign_model, field_name, related_name,
                                  our_index=None, our_foreign_index=None,
                                  select_related=None, many=True):
-        '''
+        """
         This is a utility method that can be used to pretech backward relations.
         For instance, you can add subscription lists to each user using only one line of code.
 
@@ -1281,7 +1286,7 @@ class AdvancedReport(object):
             - select_related: performs a select_related on the query on foreign_model.
             - many: if set to False, a single item will be assigned instead of a list. When
               the list is empty, None will be assigned.
-        '''
+        """
 
         our_index = our_index or (lambda i: i.pk)
         oi = lambda i: int(our_index(i)) if our_index(i) is not None else None
@@ -1337,9 +1342,9 @@ class AdvancedReport(object):
 
         if request is not None:
             if found_action is None:
-                raise Http404(_(u'Unsupported action method "%s".' % method))
+                raise Http404(_('Unsupported action method "%s".' % method))
             if not found_action.is_allowed(request):
-                raise Http404(_(u'You\'re not allowed to execute "%s".' % method))
+                raise Http404(_('You\'re not allowed to execute "%s".' % method))
 
         return found_action
 
@@ -1352,26 +1357,26 @@ class AdvancedReport(object):
     @property
     def date_range_verbose_name(self):
         if not self.date_range:
-            return u''
+            return ''
         return self.get_field_metadata(self.date_range)['verbose_name']
 
     def get_empty_text(self):
         if self.empty_text:
             return self.empty_text
-        return _(u'There are no %(items)s to display.') % {'items': self.verbose_name_plural}
+        return _('There are no %(items)s to display.') % {'items': self.verbose_name_plural}
 
     def assign_attr(self, object, attr_name, value):
-        '''
+        """
         Assigns a value to an attribute. When the given object is a dict, the value will be assigned
         as a key-value pair.
-        '''
+        """
         if isinstance(object, dict):
             object[attr_name] = value
         else:
             setattr(object, attr_name, value)
 
     def urlize(self, urlname, kwargs):
-        return lambda h: u'<a href="%(l)s">%(h)s</a>' % {'l': reverse(urlname, kwargs=kwargs), 'h': h}
+        return lambda h: '<a href="%(l)s">%(h)s</a>' % {'l': reverse(urlname, kwargs=kwargs), 'h': h}
 
 
 class EnrichedQueryset(object):

@@ -1,5 +1,5 @@
 from collections import defaultdict
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
@@ -9,22 +9,20 @@ from django.core.urlresolvers import reverse
 from django.db.models.signals import post_save, post_delete
 from django.http import Http404, HttpResponse
 from django.http.response import HttpResponseForbidden
-from django.shortcuts import render_to_response, get_object_or_404, redirect, render
-from django.template.context import RequestContext
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.views.decorators.cache import never_cache
 
 from .api_utils import JSONResponse, ViewRequestParameters
-from .conf import DB_IS_POSTGRES
 from .models import SearchIndex
-from .search import convert_to_raw_tsquery
 from .decorators import staff_member_required
 
 import random
+import six
 
 
 def random_token():
-    return u'<!-- random: %d -->' % random.randint(0, 10000000000)
+    return '<!-- random: %d -->' % random.randint(0, 10000000000)
 
 
 def check_permission(request, permission):
@@ -61,7 +59,7 @@ class AutoTemplate(AutoSlug):
 
     def __get__(self, instance, owner):
         slug = super(AutoTemplate, self).__get__(instance, owner)
-        return u'advanced_reports/backoffice/{0}/{1}.html'.format(self.directory, slug)
+        return 'advanced_reports/backoffice/{0}/{1}.html'.format(self.directory, slug)
 
 
 class BackOfficeTab(object):
@@ -88,7 +86,7 @@ class BackOfficeTab(object):
         if template:
             self.template = template
         else:
-            self.template = u'advanced_reports/backoffice/{0}/{1}.html'.format('tabs', slug)
+            self.template = 'advanced_reports/backoffice/{0}/{1}.html'.format('tabs', slug)
         self.shadow = shadow
         self.permission = permission
         self.context = context or {}
@@ -107,8 +105,7 @@ class BackOfficeTab(object):
         return {
             'slug': self.slug,
             'title': self.title,
-            'template': render_to_string(template, context,
-                                         context_instance=RequestContext(request)) + random_token(),
+            'template': render_to_string(template, context, request=request) + random_token(),
             'shadow': self.shadow
         }
 
@@ -208,7 +205,7 @@ class BackOfficeModel(object):
         """
         A textual representation of a model instance to be used as a title.
         """
-        return unicode(instance)
+        return six.text_type(instance)
 
     def serialize(self, instance):
         """
@@ -222,9 +219,8 @@ class BackOfficeModel(object):
             context = {
                 'instance': instance
             }
-            return render_to_string(self.header_template, context,
-                                    context_instance=RequestContext(request))
-        return u''
+            return render_to_string(self.header_template, context, request=request)
+        return ''
 
     def get_parent_model_slug_for_field(self, parent_field):
         return None
@@ -352,7 +348,7 @@ class BackOfficeModel(object):
             pass
 
     def search_index(self, instance):
-        return unicode(instance)
+        return six.text_type(instance)
 
 
 class ModelMixin(object):
@@ -522,7 +518,7 @@ class ModelMixin(object):
         pk = request.view_params.get('pk')
         bo_model = self.get_model(slug=model_slug)
         if not check_permission(request, bo_model.permission):
-            return HttpResponse(u'You are not allowed to view this page.', status=403)
+            return HttpResponse('You are not allowed to view this page.', status=403)
         obj = bo_model.model.objects.get(pk=pk)
         serialized = bo_model.get_serialized(request, obj, children=True, parents=True, siblings=True, templates=True)
         return serialized
@@ -545,11 +541,11 @@ class ModelMixin(object):
 
         # Prevent posting to this view if not allowed to access this view
         if not check_permission(request, bo_model.permission):
-            return HttpResponse(u'You are not allowed to post data to the model "%s".' % bo_model.slug, status=403)
+            return HttpResponse('You are not allowed to post data to the model "%s".' % bo_model.slug, status=403)
 
         fn = getattr(bo_model, method, None)
         if not fn:
-            raise Http404(u'Cannot find method %s on model %s' % (method, bo_model.slug))
+            raise Http404('Cannot find method %s on model %s' % (method, bo_model.slug))
         return fn(request)
 
 
@@ -616,14 +612,10 @@ class SearchMixin(object):
         :param include_counts: (optional) whether to include the counts.
         :return: ``{'results': [self.serialize_search_results()], 'model_counts': [self.count_by_model()]}``
         """
-        if query == u'':
+        if query == '':
             return ()
 
-        if not DB_IS_POSTGRES:
-            all_indices = SearchIndex.objects.filter(to_index__icontains=query, backoffice_instance=self.name)
-        else:
-            ts_query = convert_to_raw_tsquery(query)
-            all_indices = SearchIndex.objects.search(ts_query, raw=True).filter(backoffice_instance=self.name)
+        all_indices = SearchIndex.objects.filter(to_index__icontains=query, backoffice_instance=self.name)
 
         model_counts = self.count_by_model(request, all_indices) if include_counts else []
 
@@ -702,7 +694,7 @@ class BackOfficeView(object):
         """
         Serializes the given content to a format that is easy to encode to JSON.
         """
-        if isinstance(content, str):
+        if isinstance(content, six.binary_type):
             content = content.decode('utf-8')
 
         context = {
@@ -789,11 +781,12 @@ class ViewMixin(object):
         bo_view = self.get_view(slug)
 
         if not bo_view:
-            return {'content': u'<span class="text-danger">View with slug "%s" does not exist. Are you sure you have registered it?</span>' % slug}
+            return {'content': '<span class="text-danger">View with slug "%s" does not exist. '
+                               'Are you sure you have registered it?</span>' % slug}
 
         # Just hide the view if the viewing of it is not permitted
         if not check_permission(request, bo_view.permission):
-            return {'content': u''}
+            return {'content': ''}
 
         return bo_view.get_serialized(request)
 
@@ -810,7 +803,7 @@ class ViewMixin(object):
 
         # Prevent posting to this view if not allowed to access this view
         if not check_permission(request, bo_view.permission):
-            return HttpResponse(u'You are not allowed to post data to the view "%s".' % bo_view.slug, status=403)
+            return HttpResponse('You are not allowed to post data to the view "%s".' % bo_view.slug, status=403)
 
         return bo_view.get_serialized_post(request)
 
@@ -833,11 +826,11 @@ class ViewMixin(object):
 
         # Prevent posting to this view if not allowed to access this view
         if not check_permission(request, bo_view.permission):
-            return HttpResponse(u'You are not allowed to post data to the view "%s".' % bo_view.slug, status=403)
+            return HttpResponse('You are not allowed to post data to the view "%s".' % bo_view.slug, status=403)
 
         fn = getattr(bo_view, method, None)
         if not fn:
-            raise Http404(u'Cannot find method %s on view %s' % (method, bo_view.slug))
+            raise Http404('Cannot find method %s on view %s' % (method, bo_view.slug))
         return fn(request)
 
     def api_get_view_view(self, request):
@@ -854,11 +847,11 @@ class ViewMixin(object):
 
         # Prevent accessing this view if not allowed
         if not check_permission(request, bo_view.permission):
-            return HttpResponse(u'You are not allowed to view data from the view "%s".' % bo_view.slug, status=403)
+            return HttpResponse('You are not allowed to view data from the view "%s".' % bo_view.slug, status=403)
 
         fn = getattr(bo_view, method, None)
         if not fn:
-            raise Http404(u'Cannot find method %s on view %s' % (method, bo_view.slug))
+            raise Http404('Cannot find method %s on view %s' % (method, bo_view.slug))
         return fn(request)
 
     def api_post_view_view(self, request):
@@ -923,16 +916,15 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
 
         :return: url patterns
         """
-        return patterns('',
-                        url(r'^$', self.decorate(self.home), name='home'),
-                        url(r'^logout/$', self.logout, name='logout'),
-                        url(r'^api/(?P<method>[^/]+)/$', self.decorate(self.api), name='api'),
-                        url(r'^api/$', self.decorate(self.api), name='api_home'),
-                        url(r'^login/as/(?P<user_id>\d+)/$', self.decorate(self.login_as), name='login_as'),
-                        url(r'^end/login/as/$', self.end_login_as, name='end_login_as'),
-                        url(r'^handle/$', self.handle, name='handle'),
-                        *self.define_urls()
-        ), self.app_name, self.name
+        return [
+            url(r'^$', self.decorate(self.home), name='home'),
+            url(r'^logout/$', self.logout, name='logout'),
+            url(r'^api/(?P<method>[^/]+)/$', self.decorate(self.api), name='api'),
+            url(r'^api/$', self.decorate(self.api), name='api_home'),
+            url(r'^login/as/(?P<user_id>\d+)/$', self.decorate(self.login_as), name='login_as'),
+            url(r'^end/login/as/$', self.end_login_as, name='end_login_as'),
+            url(r'^handle/$', self.handle, name='handle'),
+        ] + list(self.define_urls()), self.app_name, self.name
 
     def decorate(self, view):
         """
@@ -970,9 +962,7 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
         """
         The main Django view for this backoffice.
         """
-        return render_to_response(self.model_template,
-                                  self.default_context(),
-                                  context_instance=RequestContext(request))
+        return render(request, self.model_template, self.default_context())
 
     # Impersonation
     def login_as(self, request, user_id):

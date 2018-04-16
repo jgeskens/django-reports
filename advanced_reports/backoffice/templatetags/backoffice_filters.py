@@ -6,7 +6,7 @@ from django.utils.translation import ugettext as _
 from django.utils.text import capfirst
 
 import re
-import HTMLParser
+import html.parser
 import json as json_lib
 
 
@@ -25,17 +25,16 @@ def angularize_form(value, model_prefix=None):
 
     def replace_name_func(match):
         name = match.groups()[0]
-        short_name = name.split(u'-', 1)[1] if u'-' in name else name
-        model = short_name if model_prefix is None else u'%s.%s' % (model_prefix, short_name)
-        return u' name="%(name)s" ng-model="%(model)s"' % locals()
+        short_name = name.split('-', 1)[1] if '-' in name else name
+        model = short_name if model_prefix is None else '%s.%s' % (model_prefix, short_name)
+        return ' name="%(name)s" ng-model="%(model)s"' % locals()
 
     def replace_value_func(match):
         model, value = 1, 3
         groups = list(match.groups())
-        parsed_value = HTMLParser.HTMLParser().unescape(groups[value])
-        groups[model] = u'%s" ng-init="%s=\'%s\'' % (groups[model], groups[model], parsed_value.replace(u"'", u"\\'"))
-        print repr(groups)
-        return u''.join(groups)
+        parsed_value = html.parser.HTMLParser().unescape(groups[value])
+        groups[model] = '%s" ng-init="%s=\'%s\'' % (groups[model], groups[model], parsed_value.replace(u"'", u"\\'"))
+        return ''.join(groups)
 
     replaced_name = re.sub(r'\s+name="([^"]+)"', replace_name_func, value)
     replaced_value = re.sub(r'(<[^>]+\s+ng-model=")([^"]+)("[^>]+\s+value=")([^"]+)("[^>]*>)', replace_value_func, replaced_name)
@@ -55,21 +54,18 @@ def json(value):
 
 @register.filter
 def pretty_join(value_list, seperator=', '):
-    '''
+    """
     Example:
     >>> pretty_join(['a', 'b', 'c'])
-    u'a, b and c'
-    '''
-    output = seperator.join(capfirst(value) for value in value_list)
+    'a, b and c'
+    """
+    print(repr(value_list))
+    if len(value_list) <= 1:
+        return seperator.join(value_list)
 
-    # find last occurence
-    index = output.rfind(seperator)
-    if index >= 0:
-        # replace it
-        output = u'%s %s %s' % (output[0:index],
-                                _(u'and'),
-                                output[index-1 + len(seperator):])
-    return output
+    head = seperator.join(capfirst(value) for value in value_list[:-1])
+
+    return '{} and {}'.format(head, capfirst(value_list[-1]))
 
 
 @register.filter
@@ -78,7 +74,7 @@ def inline_errors(value):
     err_list = OrderedDict({})
 
     # sort errors
-    for key,errors in form.errors.items():
+    for key, errors in form.errors.items():
         for error in errors:
             if error not in err_list:
                 err_list[error] = []
@@ -86,9 +82,9 @@ def inline_errors(value):
                 label = form.fields[key].label
                 if label:
                     label = _(label)
-                    label = label.replace(u'?', u'')
-                    label = label.replace(u'!', u'')
-                    label = label.replace(u':', u'')
+                    label = label.replace('?', '')
+                    label = label.replace('!', '')
+                    label = label.replace(':', '')
                     err_list[error].append(label)
                 else:
                     err_list[error].append(key)

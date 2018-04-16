@@ -2,34 +2,32 @@
 from django import forms
 from django.contrib import messages
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, Http404, StreamingHttpResponse
-from django.shortcuts import render_to_response, redirect
+from django.http import HttpResponse, Http404
+from django.shortcuts import render_to_response, redirect, render
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
-from django.utils.html import strip_entities, strip_tags
 from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext as _
-import itertools
 
 import six
 
 from .backoffice.api_utils import JSONResponse
-from .decorators import conditional_delegation, report_view
+from .decorators import report_view
 from .defaults import ActionException, Resolver
 from .utils import paginate
+
 
 def _get_redirect(advreport, next=None, querystring=None):
     if next:
         return redirect(next)
     if advreport.urlname:
         return redirect(reverse(advreport.urlname))
-    suffix = u''
+    suffix = ''
     if querystring:
-        suffix = u'?%s' % querystring
+        suffix = '?%s' % querystring
     return redirect(reverse('advanced_reports_list', kwargs={'slug': advreport.slug}) + suffix)
 
 
-@conditional_delegation(lambda request: 'delegate' in request.GET)
 @report_view
 def list(request, advreport, ids=None, internal_mode=False, report_header_visible=True):
     advreport.internal_mode = internal_mode
@@ -45,12 +43,12 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
         method = request.POST['method']
 
         if not method:
-            messages.warning(request, _(u'You did not select any action.'))
+            messages.warning(request, _('You did not select any action.'))
             if not advreport.internal_mode:
                 return _get_redirect(advreport)
 
         if len(selected_object_ids) == 0:
-            messages.warning(request, _(u'You did not select any %(object)s.') % {'object': advreport.verbose_name})
+            messages.warning(request, _('You did not select any %(object)s.') % {'object': advreport.verbose_name})
             if not advreport.internal_mode:
                 return _get_redirect(advreport)
 
@@ -60,52 +58,20 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
                 return response
 
             if count > 0:
-                messages.success(request, _(u'Successfully executed action on %(count)d %(objects)s')
+                messages.success(request, _('Successfully executed action on %(count)d %(objects)s')
                                                 % {'count': count,
-                                                   'objects': advreport.verbose_name_plural if count != 1 else advreport.verbose_name})
+                                                   'objects': advreport.verbose_name_plural
+                                                   if count != 1
+                                                   else advreport.verbose_name})
             else:
-                messages.error(request, _(u'No selected %(object)s is applicable for this action.') % {'object': advreport.verbose_name})
+                messages.error(request, _('No selected %(object)s is applicable for this action.') % {'object': advreport.verbose_name})
             if not advreport.internal_mode:
                 return _get_redirect(advreport, querystring=request.META['QUERY_STRING'])
-        except ActionException, e:
+        except ActionException as e:
             context.update({'error': e.msg})
-
 
     object_list, extra_context = advreport.get_object_list(request, ids=ids)
     context.update(extra_context)
-
-    # CSV?
-    if 'csv' in request.GET:
-        try:
-            from djprogress import with_progress # pragma: no cover
-        except ImportError: # pragma: no cover
-            with_progress = lambda it, **kw: it # pragma: no cover
-        # Avoid microsoft SYLK problem http://support.microsoft.com/kb/215591
-        _mark_safe = lambda s: s if unicode(s) != u'ID' else u'"%s"' % s
-        object_count = len(object_list)
-        #csv = StringIO()
-        header = u'%s\n' % u';'.join(_mark_safe(c['verbose_name']) for c in advreport.column_headers)
-        lines = (u'%s\n' % u';'.join((c['html'] for c in o.advreport_column_values)) \
-                 for o in with_progress(object_list.iterator() \
-                                            if hasattr(object_list, 'iterator') \
-                                            else object_list[:],
-                                        name='CSV export of %s' % advreport.slug,
-                                        count=object_count))
-        lines = (line.replace(u'&nbsp;', u' ') for line in lines)
-        lines = (line.replace(u'&euro;', u'€') for line in lines)
-        lines = (line.replace(u'<br/>', u' ') for line in lines)
-        lines = (strip_entities(line) for line in lines)
-        lines = (strip_tags(line).encode('utf-8') for line in lines)
-        #csv.write(header)
-        #csv.writelines(lines)
-        response_content = itertools.chain([header], lines)
-
-        # We use streaming http response because sometimes generation of each line takes some time and for big exports
-        # it leads to timeout on the response generation
-        response = StreamingHttpResponse(response_content, content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="%s.csv"' % advreport.slug
-
-        return response
 
     # Paginate
     paginated = paginate(request, object_list, advreport.items_per_page)
@@ -162,7 +128,7 @@ def ajax(request, advreport, method, object_id, param=None):
     advreport.enrich_object(object, request=request)
     a = advreport.find_object_action(object, method)
     if a is None:
-        return HttpResponse(_(u'Unsupported action method "%s".' % method), status=404)
+        return HttpResponse(_('Unsupported action method "%s".' % method), status=404)
 
     context = {'advreport': advreport}
 
@@ -184,7 +150,7 @@ def ajax(request, advreport, method, object_id, param=None):
 
             advreport.enrich_object(object, request=request)
             context.update({'object': object})
-            return render_to_response(advreport.item_template, context, context_instance=RequestContext(request))
+            return render(request, advreport.item_template, context)
 
         elif a.form is None:
             if param:
@@ -198,18 +164,18 @@ def ajax(request, advreport, method, object_id, param=None):
             if a.form_template:
                 context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': a.form}))})
 
-            return render_to_response(advreport.item_template, context, context_instance=RequestContext(request))
+            return render(request, advreport.item_template, context)
 
-    except ActionException, e:
+    except ActionException as e:
         return HttpResponse(e.msg, status=404)
 
     # a.form is not None but not a POST request
-    return HttpResponse(_(u'Unsupported request method.'), status=404)
+    return HttpResponse(_('Unsupported request method.'), status=404)
 
 
 @report_view
 def count(request, advreport):
-    return HttpResponse(unicode(advreport.get_item_count()))
+    return HttpResponse(six.text_type(advreport.get_item_count()))
 
 
 @report_view
@@ -235,7 +201,7 @@ def ajax_form(request, advreport, method, object_id, param=None):
             object = advreport.get_item_for_id(object_id)
             advreport.enrich_object(object, request=request)
             context.update({'success': a.get_success_message(), 'object': object, 'action': a})
-            response = render_to_string(advreport.item_template, context, context_instance=RequestContext(request))
+            response = render_to_string(advreport.item_template, context, request=request)
             return r or JSONResponse({
                 'status': 'SUCCESS',
                 'content': response
@@ -375,7 +341,7 @@ def api_action(request, advreport, method, object_id=None):
 
     # Build a bound form if this action has a form.
     prefix = object_id or 'actionform'
-    form = a.get_bound_form(request, obj, prefix)
+    form = a.get_bound_form(advreport, request, obj, prefix)
 
     # Check if the action is a regular view. If we are posting a form to it in an AJAX-call,
     # and if the form is valid, we instruct the frontend to call this API using a regular
@@ -392,7 +358,7 @@ def api_action(request, advreport, method, object_id=None):
             # The actual action method call
             try:
                 response = advreport.get_action_callable(a.method)(*action_args)
-            except ActionException, e:
+            except ActionException as e:
                 return HttpResponse(e.msg, status=404)
 
             # If we have a response, this means we can stop the normal flow and return the response

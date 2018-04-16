@@ -1,14 +1,17 @@
+from __future__ import unicode_literals
+
 from django.contrib import messages
 from django.http.request import QueryDict
 from django.http.response import HttpResponseBase
 from django.shortcuts import redirect
-from django.template.context import RequestContext
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext as _
 from advanced_reports.backoffice.base import BackOfficeView
 from advanced_reports import get_report_for_slug
 from advanced_reports.defaults import ActionException
 from advanced_reports.views import api_list, api_action, api_form
+
+import six
 
 
 class AdvancedReportView(BackOfficeView):
@@ -30,7 +33,7 @@ class AdvancedReportView(BackOfficeView):
         report_slug = request.view_params.get('slug')
         advreport = get_report_for_slug(report_slug)
         context = {'advreport': advreport}
-        return render_to_string(self.template, context, context_instance=RequestContext(request))
+        return render_to_string(self.template, context, request=request)
 
     def fetch(self, request):
         obj_id = request.view_params.get('pk', None)
@@ -92,14 +95,14 @@ class AdvancedReportView(BackOfficeView):
                         if action.form_template:
                             response_form = render_to_string(action.form_template, {'form': form})
                         else:
-                            response_form = unicode(form)
+                            response_form = six.text_type(form)
                         return {'response_form': response_form}
                 else:
                     response = getattr(advreport, '%s_multiple' % method)(items)
                 if response:
                     return response
-                messages.success(request, _(u'Successfully executed action on all selected items.'))
-            except ActionException, e:
+                messages.success(request, _('Successfully executed action on all selected items.'))
+            except ActionException as e:
                 messages.error(request, e.msg)
             return {'succeeded': {}}
         else:
@@ -111,21 +114,21 @@ class AdvancedReportView(BackOfficeView):
                         if action.is_allowed(request):
                             result = getattr(advreport, method)(item)
                             if isinstance(result, HttpResponseBase) and result.status_code == 200:
-                                messages.warning(request, _(u'This action does not support batch operations.'))
+                                messages.warning(request, _('This action does not support batch operations.'))
                             else:
                                 succeeded[advreport.get_item_id(item)] = action.get_success_message()
                         else:
-                            failed[advreport.get_item_id(item)] = _(u'You are not allowed to execute this action.')
+                            failed[advreport.get_item_id(item)] = _('You are not allowed to execute this action.')
                     else:
-                        failed[advreport.get_item_id(item)] = _(u'This action is not applicable to this item.')
-                except ActionException, e:
+                        failed[advreport.get_item_id(item)] = _('This action is not applicable to this item.')
+                except ActionException as e:
                     failed[advreport.get_item_id(item)] = e.msg
             if succeeded and not failed:
-                messages.success(request, _(u'Successfully executed action on all selected items.'))
+                messages.success(request, _('Successfully executed action on all selected items.'))
             elif succeeded and failed:
-                messages.warning(request, _(u'Some actions were successful, but some were also failed.'))
+                messages.warning(request, _('Some actions were successful, but some were also failed.'))
             else:
-                messages.error(request, _(u'No action on the selected items was successful.'))
+                messages.error(request, _('No action on the selected items was successful.'))
             return {'succeeded': succeeded, 'failed': failed}
 
     def multiple_action_view(self, request):
@@ -150,7 +153,7 @@ class AdvancedReportView(BackOfficeView):
                     return getattr(advreport, '%s_multiple' % method)(items, form)
             else:
                 return getattr(advreport, '%s_multiple' % method)(items)
-        messages.error(request, _(u'No items were applicable for this action.'))
+        messages.error(request, _('No items were applicable for this action.'))
         return redirect(request.META['HTTP_REFERER'])
 
     def auto_complete(self, request):

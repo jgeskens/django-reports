@@ -4,18 +4,21 @@ from django.utils.translation import ugettext_lazy as make_proxy
 from django.conf import settings
 
 import json
+import six
 
 
 _proxy_type = type(make_proxy('ignore this'))
+
+
 def _json_object_encoder(obj):
     if isinstance(obj, _proxy_type):
-        return u'%s' % obj
+        return six.text_type(obj)
     elif isinstance(obj, Decimal):
-        return unicode(obj)
+        return six.text_type(obj)
     elif hasattr(obj, 'isoformat'):
         return obj.isoformat()
     elif hasattr(obj, 'splitlines'):
-        return unicode(obj)
+        return six.text_type(obj)
     else:
         return None
 
@@ -34,11 +37,8 @@ class ViewRequestParameters(object):
     def __init__(self, request):
         self.GET = request.GET
         self.POST = request.POST
-        try:
-            self.body = request.body
-            self.json_dict = json.loads(self.body) if 'application/json' in request.META['CONTENT_TYPE'] else {}
-        except:
-            self.json_dict = {}
+        self.body = request.body
+        self.json_dict = json.loads(self.body.decode('utf-8')) if 'application/json' in request.content_type else {}
 
         self.fallbacks = (self.GET, self.POST, self.json_dict)
         self.list_fallbacks = (self.GET, self.POST)
@@ -52,9 +52,9 @@ class ViewRequestParameters(object):
 
     def getlist(self, item, default=None):
         for fallback in self.list_fallbacks:
-            l = fallback.getlist(item)
-            if l != []:
-                return l
+            lst = fallback.getlist(item)
+            if lst:
+                return lst
         if default is None:
             return []
         return default

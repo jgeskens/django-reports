@@ -11,20 +11,20 @@
         <title>{% block title %}{{ backoffice.title }}{% endblock %}</title>
 
         <!-- Bootstrap core CSS -->
-        <link href="{{ STATIC_URL }}advanced_reports/css/core.css" rel="stylesheet" />
+        <link href="{% static 'advanced_reports/css/core.css' %}" rel="stylesheet" />
 
         <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.1/jquery.min.js"></script>
 
         <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
         <!--[if lt IE 9]>
-            <script src="{{ STATIC_URL }}advanced_reports/js/html5shiv.js"></script>
-            <script src="{{ STATIC_URL }}advanced_reports/js/respond.min.js"></script>
+            <script src="{% static 'advanced_reports/js/html5shiv.js' %}"></script>
+            <script src="{% static 'advanced_reports/js/respond.min.js' %}"></script>
         <![endif]-->
 
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.js"></script>
         <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular-cookies.js"></script>
-        <script src="{{ STATIC_URL }}advanced_reports/js/backoffice.js"></script>
-        <script src="{{ STATIC_URL }}advanced_reports/js/advreport-angular.js"></script>
+        <script src="{% static 'advanced_reports/js/backoffice.js' %}"></script>
+        <script src="{% static 'advanced_reports/js/advreport-angular.js' %}"></script>
 
         {% block extra-head %}{% endblock %}
     </head>
@@ -79,7 +79,7 @@
                                     </li>
                                     {% endverbatim %}
                                     <li ng-show="!search_results_preview" class="disabled">
-                                        <a><img src="{{ STATIC_URL }}advanced_reports/img/modybox/loading.gif"></a>
+                                        <a><img src="{% static 'advanced_reports/img/modybox/loading.gif' %}"></a>
                                     </li>
                                     <li ng-show="search_results_preview.results.length == 0" class="disabled">
                                         <a>{% trans "No results found" %}</a>
@@ -104,7 +104,7 @@
                         </ul>
 
                         <div class="navbar-text navbar-left">
-                            <img ng-show="isLoading()" src="{{ STATIC_URL }}advanced_reports/img/modybox/loading.gif">
+                            <img ng-show="isLoading()" src="{% static 'advanced_reports/img/modybox/loading.gif' %}">
                         </div>
 
                         {% block navbar-right %}{% endblock %}
@@ -135,23 +135,23 @@
         </div>
         {% endblock %}
 
+        {% comment %}
         <footer>
             {% block footer %}
             <div class="container">
-                {% with '<a href="https://github.com/vikingco/django-advanced-reports">Advanced Reports</a>' as advreports_github_url %}
-                    {% blocktrans %}Proudly powered by {{ advreports_github_url }}{% endblocktrans %}
-                {% endwith %}
+                &copy; 2018
             </div>
             {% endblock %}
         </footer>
+        {% endcomment %}
 
         <!-- Bootstrap core JavaScript
         ================================================== -->
         <!-- Placed at the end of the document so the pages load faster -->
-        <script src="{{ STATIC_URL }}advanced_reports/js/bootstrap.js"></script>
-        <script src="{{ STATIC_URL }}advanced_reports/js/core.js"></script>
-        <script src="{{ STATIC_URL }}advanced_reports/js/modules/notification.js"></script>
-        <script src="{{ STATIC_URL }}admin/js/admin/RelatedObjectLookups.js"></script>
+        <script src="{% static 'advanced_reports/js/bootstrap.js' %}"></script>
+        <script src="{% static 'advanced_reports/js/core.js' %}"></script>
+        <script src="{% static 'advanced_reports/js/modules/notification.js' %}"></script>
+        <!--<script src="{% static 'admin/js/admin/RelatedObjectLookups.js' %}"></script>-->
 
         <script>
             frontend.notification.init();

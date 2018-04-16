@@ -1,19 +1,19 @@
 from django import template
-from django.template.context import RequestContext
 from django.template.loader import render_to_string
 
 from advanced_reports.views import list as advreport_list
-from advanced_reports import get_report_or_404
 
 register = template.Library()
-             
+
+
 @register.tag(name='advreport_detail')
 def advreport_detail(parser, token):
     try:
         tag_name, advreport_slug, obj_list, internal_mode, report_header_visible = token.split_contents()
     except ValueError:
-        raise template.TemplateSyntaxError, "%s tag requires exactly 4 argument" % token.contents.split()[0]
+        raise template.TemplateSyntaxError("%s tag requires exactly 4 argument" % token.contents.split()[0])
     return AdvReportNode(advreport_slug, obj_list, internal_mode, report_header_visible)
+
 
 class AdvReportNode(template.Node):
     def __init__(self, advreport_slug, obj_list, internal_mode, report_header_visible):
@@ -42,12 +42,14 @@ class AdvReportNode(template.Node):
             else:
                 ids = [obj_list.id,]
             return advreport_list(request, slug, ids, internal_mode, report_header_visible)
-        except Exception, e:
+        except Exception as e:
              return e
+
 
 @register.tag(name='advreport_js')
 def advreport_js(parser, token):
     return AdvReportJSNode()
+
 
 class AdvReportJSNode(template.Node):
     def __init__(self):
@@ -55,11 +57,13 @@ class AdvReportJSNode(template.Node):
 
     def render(self, context):
         request = self.request.resolve(context)
-        return render_to_string('advanced_reports/inc_js.html', {}, context_instance=RequestContext(request))
+        return render_to_string('advanced_reports/inc_js.html', {}, request=request)
+
 
 @register.tag(name='advreport_css')
 def advreport_css(parser, token):
     return AdvReportCSSNode()
+
 
 class AdvReportCSSNode(template.Node):
     def __init__(self):
@@ -67,4 +71,4 @@ class AdvReportCSSNode(template.Node):
 
     def render(self, context):
         request = self.request.resolve(context)
-        return render_to_string('advanced_reports/inc_css.html', {}, context_instance=RequestContext(request))
+        return render_to_string('advanced_reports/inc_css.html', {}, request=request)
