@@ -59,7 +59,6 @@ def pretty_join(value_list, seperator=', '):
     >>> pretty_join(['a', 'b', 'c'])
     'a, b and c'
     """
-    print(repr(value_list))
     if len(value_list) <= 1:
         return seperator.join(value_list)
 

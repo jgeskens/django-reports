@@ -75,7 +75,7 @@ class AdvancedReportView(BackOfficeView):
 
         if data:
             # We have to do str(data) because otherwise QueryDict is too lazy to decode...
-            post = QueryDict(str(data), encoding='utf-8')
+            post = QueryDict(six.binary_type(data, encoding='utf-8'), encoding='utf-8')
             request.POST = post
 
         if global_select:
@@ -86,7 +86,7 @@ class AdvancedReportView(BackOfficeView):
             try:
                 action = advreport.find_action(method)
                 if action.form:
-                    form = action.form(request.POST, prefix='actionform')
+                    form = action.instantiate_form(advreport, 'actionform', data=request.POST)
                     if form.is_valid():
                         if action.is_regular_view and request.is_ajax():
                             return {'link_action': {'method': method, 'data': request.POST}}
@@ -148,7 +148,7 @@ class AdvancedReportView(BackOfficeView):
         if items:
             action = advreport.find_action(method)
             if action.form:
-                form = action.form(request.GET, prefix='actionform')
+                form = action.instantiate_form(advreport, 'actionform', data=request.GET)
                 if form.is_valid():
                     return getattr(advreport, '%s_multiple' % method)(items, form)
             else:

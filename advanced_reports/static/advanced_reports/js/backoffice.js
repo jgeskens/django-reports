@@ -1,3 +1,7 @@
+$(document).ready(function() {
+    $('.select2').select2();
+});
+
 var app = angular.module('BackOfficeApp', ['ngCookies']);
 
 app.run(['$http', '$cookies', function ($http, $cookies){
