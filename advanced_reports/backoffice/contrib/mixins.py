@@ -28,7 +28,7 @@ class BackOfficeReportMixin(object):
         """
         return get_backoffice_from_path(self.request.path)
 
-    def link_to(self, instance):
+    def link_to(self, instance, tab=None):
         """
         Returns a HTML decorator providing, if available, a web link to the given model instance.
 
@@ -39,7 +39,9 @@ class BackOfficeReportMixin(object):
         bo_model = backoffice.get_model(model=instance.__class__)
 
         if bo_model is not None:
-            return lambda h: '<a link-to="%s">%s</a>' % ("{model: '%s', id: %d}" % (bo_model.slug, instance.pk), h)
+            format_string = "{model: '%s', id: %d}" if tab is None else "{model: '%s', id: %d, tab: '{}'}".replace(
+                '{}', tab)
+            return lambda h: '<a link-to="%s">%s</a>' % (format_string % (bo_model.slug, instance.pk), h)
 
         elif hasattr(instance, 'get_absolute_url'):
             return lambda h: '<a href="%s">%s</a>' % (instance.get_absolute_url(), h)
