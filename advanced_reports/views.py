@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from django import forms
 from django.contrib import messages
+from django.core.paginator import EmptyPage
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, Http404
 from django.shortcuts import render_to_response, redirect, render
@@ -283,12 +284,15 @@ def api_list(request, advreport, ids=None):
     if 'row_limit' in request.GET:
         advreport.items_per_page = int(request.GET['row_limit'])
 
-    paginated = paginate(request, object_list, advreport.items_per_page)
+    try:
+        paginated_object_list = paginate(request, object_list, advreport.items_per_page)[:]
+    except EmptyPage:
+        paginated_object_list = []
 
     report = {
         'header': advreport.column_headers,
         'extra': extra_context,
-        'items': [_item_values(request, o, advreport) for o in paginated.object_list[:]],
+        'items': [_item_values(request, o, advreport) for o in paginated_object_list],
         'items_per_page': advreport.items_per_page,
         'item_count': len(object_list),
         'searchable_columns': advreport.searchable_columns,
