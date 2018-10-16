@@ -1,5 +1,6 @@
 from functools import wraps
-from django.contrib.admin.forms import AdminAuthenticationForm
+
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.views import login
 from django.contrib.auth import REDIRECT_FIELD_NAME
 
@@ -17,7 +18,7 @@ def login_required(backoffice, predicate=None):
             assert hasattr(request, 'session'), "Advanced Reports Backoffice requires session middleware to be installed. Edit your MIDDLEWARE_CLASSES setting to insert 'django.contrib.sessions.middleware.SessionMiddleware'."
             defaults = {
                 'template_name': backoffice.login_template,
-                'authentication_form': AdminAuthenticationForm,
+                'authentication_form': AuthenticationForm,
                 'extra_context': {
                     'backoffice': backoffice,
                     REDIRECT_FIELD_NAME: request.get_full_path(),
