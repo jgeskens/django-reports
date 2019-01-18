@@ -236,6 +236,9 @@ class BackOfficeModel(object):
     def get_route(self, instance):
         return {'model': self.slug, 'id': instance.pk}
 
+    def allow_tab(self, tab, request):
+        return True
+
     def get_serialized(self, request, instance, children=False, parents=False, siblings=False, templates=False):
         serialized = {
             'id': instance.pk,
@@ -249,7 +252,7 @@ class BackOfficeModel(object):
         if templates:
             serialized['tabs'] = dict((t.slug, t.get_serialized(request, instance)) \
                                  for t in self.tabs \
-                                 if check_permission(request, t.permission))
+                                 if check_permission(request, t.permission) and self.allow_tab(t, request))
             serialized['header_template'] = self.render_template(request, instance) + random_token()
 
         if children:
@@ -311,7 +314,11 @@ class BackOfficeModel(object):
             'has_header': self.has_header,
             'collapsed': self.collapsed,
             'show_in_parent': self.show_in_parent,
-            'tabs': [t.get_serialized_meta() for t in self.tabs if check_permission(request, t.permission)],
+            'tabs': [
+                t.get_serialized_meta()
+                for t in self.tabs
+                if check_permission(request, t.permission) and self.allow_tab(t, request)
+            ],
             'is_meta': True
         }
 
