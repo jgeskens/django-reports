@@ -12,7 +12,6 @@ settings_local.py
 dist
 build
 eggs
-parts
 bin
 develop-eggs
 .installed.cfg
@@ -43,4 +42,3 @@ local.properties
 .DS_Store
 
 advreport_test_project/test.db
-

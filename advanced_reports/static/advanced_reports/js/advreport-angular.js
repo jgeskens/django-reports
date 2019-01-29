@@ -32,11 +32,14 @@ angular.module('BackOfficeApp').controller('AdvancedReportCtrl', ['$scope', '$ht
         }
     }, true);
 
-    $scope.fetch_report = function() {
+    $scope.fetch_report = function(override_page) {
         if (!$scope.search.page)
             $scope.search.page = 1;
         else
             $scope.search.page = parseInt($scope.search.page);
+        if (override_page !== undefined){
+            $scope.search.page = override_page;
+        }
 
         for (var j in $scope.search){
             if (typeof $scope.search[j] === 'undefined')
