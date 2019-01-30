@@ -13,10 +13,18 @@
 {% for field in form.visible_fields %}
     <div class="form-group {% if forloop.last %}last{% endif %} {% if field.errors %}has-error{% endif %}">
         <label for="{{ field.auto_id }}" class="col-md-3 control-label">{{ field.label }}</label>
-
         <div class="col-md-9">
-            {{ field|add_class:"form-control" }}
-            {% if field.help_text %}<span class="help-block">{{ field.help_text }}</span>{% endif %}
+            {% with input_type=field.field.widget.input_type %}
+            {% if input_type in "radio|checkbox" %}
+                <div class="{{ input_type }}">
+                    {{ field }}
+                </div>
+                {% if field.help_text %}<span class="help-block">{{ field.help_text }}</span>{% endif %}
+            {% else %}
+                {{ field|add_class:"form-control" }}
+                {% if field.help_text %}<span class="help-block">{{ field.help_text }}</span>{% endif %}
+            {% endif %}
+            {% endwith %}
         </div>
     </div>
 {% endfor %}
