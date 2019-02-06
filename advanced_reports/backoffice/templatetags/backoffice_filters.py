@@ -102,3 +102,8 @@ def inline_errors(value):
             output.append(error)
 
     return output
+
+
+@register.filter
+def stripchars(val, arg):
+    return ''.join(c for c in str(val) if c not in arg)

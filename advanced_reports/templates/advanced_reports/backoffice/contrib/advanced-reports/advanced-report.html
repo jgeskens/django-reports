@@ -108,10 +108,11 @@
 
     <div ng-show="show_header()" class="action-bar clearfix">
         <form class="form-inline col-lg-8 col-md-7 col-sm-6" role="form" ng-submit="apply_filters()">
-            <div class="form-group" ng-show="report.search_fields">
-                <input type="text" class="form-control" ng-model="filters.q" title="{% templatetag openvariable %}report.searchable_columns{% templatetag closevariable %}">
-            </div>
             {% verbatim %}
+            <div class="form-group" ng-show="report.search_fields">
+                <input type="text" class="form-control" ng-model="filters.q" title="{{ report.searchable_columns }}">
+            </div>
+
             <div class="form-group" ng-repeat="field in report.filter_fields" ng-show="report.filter_fields">
                 <select class="form-control" ng-model="$parent.filters[field]">
                     <option disabled value="">{{ report.field_metadata[field].verbose_name }}</option>

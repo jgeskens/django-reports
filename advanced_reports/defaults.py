@@ -962,10 +962,10 @@ class AdvancedReport(object):
                 if lookup:
                     qs = qs.filter(**lookup)
 
-                for k, v in self.request.GET.items():
-                    filter_fn = getattr(self, 'filter_%s' % k, None)
-                    if filter_fn and v:
-                        qs = filter_fn(qs, convert_value(k, v))
+            for k, v in self.request.GET.items():
+                filter_fn = getattr(self, 'filter_%s' % k, None)
+                if filter_fn and v:
+                    qs = filter_fn(qs, convert_value(k, v))
 
         return qs
 
