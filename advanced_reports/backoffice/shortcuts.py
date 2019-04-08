@@ -1,7 +1,7 @@
-from advanced_reports.defaults import action as original_action
+from advanced_reports.defaults import Action
 
 
-class BackOfficeAction(original_action):
+class BackOfficeAction(Action):
     form_template = 'advanced_reports/backoffice/contrib/advanced-reports/bootstrap-modal-form.html'
 
 

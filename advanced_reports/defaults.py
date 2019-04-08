@@ -1,5 +1,7 @@
 from __future__ import unicode_literals
 
+from typing import Optional, Dict, Any, Type
+
 import datetime
 import time
 from collections import OrderedDict
@@ -26,35 +28,39 @@ from advanced_reports.backoffice.base import AutoSlug
 
 
 class ActionType(object):
-    LINKS = 'links'
-    BUTTONS = 'buttons'
-    INLINE_BUTTONS = 'inline_buttons'
+    LINKS: str = 'links'
+    BUTTONS: str = 'buttons'
+    INLINE_BUTTONS: str = 'inline_buttons'
 
 
-class action(object):
-    attrs_dict = None
-    creation_counter = 0
+def action(title: Optional[str] = None, **kwargs) -> 'Action':
+    return Action(title=title, **kwargs)
+
+
+class Action(object):
+    attrs_dict: Optional[Dict[str, Any]] = None
+    creation_counter:int = 0
 
     #: Required when not using the decorator. This is a string with the method name of your AdvancedReport subclass.
     #: This method must accept an item instance. If you choose to use a form, it gets an item and a bound form.
     #: If something goes wrong in your action, raise an ActionException with a message to display to the user.
-    method = None
+    method: Optional[str] = None
 
     #: Required. This is what the user will see in the frontend. If your action is simple (as in, it has no form), this
     #: will be the name of the web link. If your action uses a form, this will be a title that will be placed before it.
     #: If you don't want to display that, just use ''.
-    verbose_name = None
+    verbose_name: Optional[str] = None
 
     #: Optional. This will be used as the success message when your action has successfully executed.
-    success = None
+    success: Optional[str] = None
 
     #: Optional. When filled in, a confirmation dialog will be displayed using this attribute as the prompt.
-    confirm = None
+    confirm: Optional[str] = None
 
     #: Optional. When used together with a override of ``verify_action_group``, you can define on a per-item basis
     #: which action will be shown or not. This is useful when your items have a certain state only allowing for
     #: actions directly related to that state.
-    group = None
+    group: Optional[str] = None
 
     #: Optional. A Django form class that should be used together with this action. Make sure your action method
     #: has a signature like this: ``def my_action(self, item, form):``.
@@ -72,12 +78,12 @@ class action(object):
     #:    If the form does pass the validation, the underlying action is called with the validated form as an extra
     #:    argument. If you are using a ModelForm, you can just perform a ``form.save()`` in the action method body.
     #:
-    form = None
+    form: Optional[Type[forms.Form]] = None
 
     #: Determines whether the action form should be shown as a pop-up dialog in the frontend or not.
     #: The default value is False, but if you are using the ``@action`` decorator version, the default is True.
     #: This strange default behavior is merely for backwards compatibility.
-    form_via_ajax = False
+    form_via_ajax: bool = False
 
     #: Determines whether the action form should be rendered at the time of the report items generation.
     #: By default this is False, but inline action forms (when ``form_via_ajax`` is False) will always be
@@ -94,66 +100,66 @@ class action(object):
 
     #: Optional. If True, the submit button will be shown. The hiding of the submit button only works
     #: when the template supports this.
-    show_submit = True
+    show_submit: bool = True
 
     #: Optional. Only used when the template supports this.
-    collapse_form = False
+    collapse_form: bool = False
 
     #: If a template path is assigned to this attribute, this template will be rendered instead of the output
     #: of {{ form }}. The template receives ``form`` and ``item`` as context variables.
-    form_template = None
+    form_template: Optional[str] = None
 
     #: Optional. If set, this instance will be used to pass to a ModelForm.
     #: You can also supply a callable. The kwargs are: ``instance`` and optionally ``param``.
-    form_instance = None
+    form_instance: Optional[Any] = None
 
     #: Optional. If True, when an action was executed successfully, the current row will be collapsed and the next row
     #: will be expanded, and the first field of the first form gets the input focus.
-    next_on_success = False
+    next_on_success: bool = False
 
     #: Makes the action invisible. If you want to use this action somewhere else, you can use the
     #: {% url 'advanced_reports_action' report_slug action_method item_id %} to execute the action.
-    hidden = False
+    hidden: bool = False
 
     #: Optional. A custom css class for this action.
-    css_class = None
+    css_class: Optional[str] = None
 
     #: Whether the action is shown on individual items. It could be that an action is only designed to work on
     #: a bulk items. When setting to False, you remove them from the individual items.
-    individual_display = True
+    individual_display: bool = True
 
     #: Enable the use of actions than can execute on multiple items.
     #: If you want to implement bulk methods operating directly on a list or queryset (if applicable), you
     #: can implement an extra ``def FOO_multiple(self, items, form=None):`` where FOO is the method name of your
     #: action. If not, it will just loop through your items and execute your action on each item one after another.
-    multiple_display = True
+    multiple_display: bool = True
 
     #: If the form of the action has a file upload, set this to True. Then the enctype="multipart/form-data"
     #: will be added to the ``<form>`` tag.
-    has_file_upload = False
+    has_file_upload: bool = False
 
     #: Optional. The permission required for this action.
-    permission = None
+    permission: Optional[str] = None
 
     #: Whether the action method acts like a regular Django view.
-    regular_view = False
+    regular_view: bool = False
 
     #: Whether the action is report-wide or not. Report-wide actions methods do not
     #: receive an argument containing the item. Only a form will be given if applicable.
     #: Report-wide actions are ideal for adding new items or links to another web page.
-    is_report_action = False
+    is_report_action: bool = False
 
     #: Whether the action is defined by the new style method (as a decorator) or not.
     #: The advantage is that new cool stuff that should not be backwards compatible can be enabled when this
     #: attribute is True.
-    is_new_style = False
+    is_new_style: bool = False
 
-    def __init__(self, title=None, **kwargs):
+    def __init__(self, title: Optional[str] = None, **kwargs) -> None:
         """
         Each kwarg maps to a property above. For documentation, refer to the individual property documentation strings.
         """
-        action.creation_counter += 1
-        self.creation_counter = action.creation_counter
+        Action.creation_counter += 1
+        self.creation_counter = Action.creation_counter
 
         if title is not None:
             kwargs['verbose_name'] = title
@@ -908,7 +914,6 @@ class AdvancedReport(object):
                             part_query = part_query | Q(**{'%s__icontains' % search_field: part})
                 filter_query = filter_query & part_query
 
-
         fake_found = []
         if len(fake_fields) > 0:
             self.enrich_list(queryset)
@@ -981,6 +986,9 @@ class AdvancedReport(object):
 
     def get_enriched_items(self, queryset):
         return EnrichedQueryset(queryset, self)
+
+    def post_process_object_list(self, object_list: 'EnrichedQueryset') -> 'EnrichedQueryset':
+        return object_list
 
     def get_object_list(self, request, ids=None):
         """Returns all the objects in the report.
@@ -1074,6 +1082,7 @@ class AdvancedReport(object):
         context.update(new_context)
 
         object_list = self.get_filtered_items(queryset, request.GET, request=request)
+        object_list = self.post_process_object_list(object_list)
 
         return object_list, context
 
