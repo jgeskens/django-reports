@@ -279,7 +279,11 @@ def _is_allowed_multiple_action(request, advreport, action):
 
 @report_view
 def api_list(request, advreport, ids=None):
-    object_list, extra_context = advreport.get_object_list(request, ids=ids)
+    try:
+        object_list, extra_context = advreport.get_object_list(request, ids=ids)
+    except Http404 as e:
+        import traceback
+        traceback.print_exc()
 
     if 'row_limit' in request.GET:
         advreport.items_per_page = int(request.GET['row_limit'])

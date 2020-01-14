@@ -201,10 +201,17 @@
                     {% endverbatim %}
                     {% if not advreport.compact or advreport.action_list_type == 'inline_buttons' %}
                     <td>
+                        {% if advreport.action_list_type == 'inline_buttons' %}
+                        <span ng-show="has_expanded_content(item)">
+                            <a ng-show="item.expanded && !select_mode()" href style="font-size: 1.5rem; font-weight: bold;">&#8963;</a>
+                            <a ng-hide="item.expanded || select_mode()" href style="font-size: 1.5rem; font-weight: bold;">&#8964;</a>
+                        </span>
+                        {% else %}
                         <span ng-show="has_expanded_content(item)">
                             <a ng-show="item.expanded && !select_mode()" href>{% trans "hide details" %}</a>
                             <a ng-hide="item.expanded || select_mode()" href>{% trans "show details" %}</a>
                         </span>
+                        {% endif %}
                         {% verbatim %}
                         <div class="btn-group" ng-show="report.action_list_type == 'inline_buttons'">
                             <a class="btn btn-xs {{ action.css_class|default:'btn-default' }}" link-to="get_action_link(item, action)" ng-click="execute_action(item, action)" ng-repeat="action in item.actions|filter:is_button_action">{{ action.verbose_name }}</a>
