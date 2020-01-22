@@ -186,7 +186,7 @@
                         <a href ng-bind="column.verbose_name" ng-show="column.sortable" ng-click="change_order(column.order_by)"></a>
                         <span ng-show="report.extra.order_field==column.name" ng-bind="{true:'&darr;', false:'&uarr;'}[report.extra.ascending]"></span>
                     </th>
-                    {% if not advreport.compact or advreport.action_list_type == 'inline_buttons' %}<th class="col-sm-2"></th>{% endif %}
+                    {% if not advreport.compact or advreport.action_list_type == 'inline_buttons' %}<th></th>{% endif %}
                 </tr>
             </thead>
 
@@ -201,22 +201,15 @@
                     {% endverbatim %}
                     {% if not advreport.compact or advreport.action_list_type == 'inline_buttons' %}
                     <td>
-                        {% if advreport.action_list_type == 'inline_buttons' %}
-                        <span ng-show="has_expanded_content(item)">
-                            <a ng-show="item.expanded && !select_mode()" href style="font-size: 1.5rem; font-weight: bold;">&#8963;</a>
-                            <a ng-hide="item.expanded || select_mode()" href style="font-size: 1.5rem; font-weight: bold;">&#8964;</a>
-                        </span>
-                        {% else %}
-                        <span ng-show="has_expanded_content(item)">
-                            <a ng-show="item.expanded && !select_mode()" href>{% trans "hide details" %}</a>
-                            <a ng-hide="item.expanded || select_mode()" href>{% trans "show details" %}</a>
-                        </span>
-                        {% endif %}
                         {% verbatim %}
                         <div class="btn-group" ng-show="report.action_list_type == 'inline_buttons'">
                             <a class="btn btn-xs {{ action.css_class|default:'btn-default' }}" link-to="get_action_link(item, action)" ng-click="execute_action(item, action)" ng-repeat="action in item.actions|filter:is_button_action">{{ action.verbose_name }}</a>
                         </div>
                         {% endverbatim %}
+                        <span ng-show="has_expanded_content(item)">
+                            <a ng-show="item.expanded && !select_mode()" href style="font-size: 1.5rem; font-weight: bold; font-family: sans-serif"><span class="glyphicon glyphicon-chevron-up" aria-hidden="true"></span></a>
+                            <a ng-hide="item.expanded || select_mode()" href style="font-size: 1.5rem; font-weight: bold; font-family: sans-serif"><span class="glyphicon glyphicon-chevron-down" aria-hidden="true"></span></a>
+                        </span>
                     </td>
                     {% endif %}
                 </tr>
