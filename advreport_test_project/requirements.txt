@@ -1,6 +1,6 @@
 Django==1.7.2
 django-widget-tweaks==1.3
-Pygments==2.0.1
+Pygments==2.7.4
 -e git+http://github.com/vikingco/django-ajax-utilities.git#egg=django-ajax-utilities
 -e git+http://github.com/vikingco/django-progress.git#egg=django-progress
 -e git+http://github.com/jgeskens/bo-querybuilder.git#egg=bo-querybuilder
