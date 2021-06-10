@@ -1,4 +1,4 @@
-Django==1.7.2
+Django==2.2.24
 django-widget-tweaks==1.3
 Pygments==2.0.1
 -e git+http://github.com/vikingco/django-ajax-utilities.git#egg=django-ajax-utilities
