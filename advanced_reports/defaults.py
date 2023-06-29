@@ -10,7 +10,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db.models import Q
 from django.db.models.query import QuerySet
 from django.http.response import Http404
@@ -19,7 +19,7 @@ from django.template.loader import render_to_string
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 from django.utils.html import strip_tags, escape
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from django.forms.models import fields_for_model
 
 import six

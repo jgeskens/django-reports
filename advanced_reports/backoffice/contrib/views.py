@@ -5,7 +5,7 @@ from django.http.request import QueryDict
 from django.http.response import HttpResponseBase
 from django.shortcuts import redirect
 from django.template.loader import render_to_string
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 from advanced_reports.backoffice.base import BackOfficeView
 from advanced_reports import get_report_for_slug
 from advanced_reports.defaults import ActionException

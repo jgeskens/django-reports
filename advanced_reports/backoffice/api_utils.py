@@ -1,6 +1,6 @@
 from decimal import Decimal
 from django.http import HttpResponse
-from django.utils.translation import ugettext_lazy as make_proxy
+from django.utils.translation import gettext_lazy as make_proxy
 from django.conf import settings
 
 import json

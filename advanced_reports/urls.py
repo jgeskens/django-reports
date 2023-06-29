@@ -1,7 +1,7 @@
-from django.conf.urls import patterns, url
+from django.urls import re_path as url
 from advanced_reports.views import *
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^(?P<slug>[^/]+)/$', list, name='advanced_reports_list'),
     
     url(r'^(?P<slug>[^/]+)/form/(?P<method>[^/]+)/(?P<object_id>[^/]+)/$', ajax_form, name='advanced_reports_form'),
@@ -21,4 +21,4 @@ urlpatterns = patterns('',
         name='advanced_reports_api_form'),
     url(r'^api/(?P<slug>[^/]+)/form/(?P<method>[^/]+)/$', api_form,
         name='advanced_reports_api_form'),
-)
+]

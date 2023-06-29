@@ -2,13 +2,13 @@
 from django import forms
 from django.contrib import messages
 from django.core.paginator import EmptyPage
-from django.core.urlresolvers import reverse
 from django.http import HttpResponse, Http404
-from django.shortcuts import render_to_response, redirect, render
+from django.shortcuts import redirect, render
 from django.template.context import RequestContext
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext as _
+from django.utils.translation import gettext as _
 
 import six
 
@@ -85,8 +85,10 @@ def list(request, advreport, ids=None, internal_mode=False, report_header_visibl
                     'paginated': paginated,
                     'object_list': object_list})
 
-    func = render_to_string if advreport.internal_mode else render_to_response
-    return func(advreport.get_template(), context, context_instance=RequestContext(request))
+    if advreport.internal_mode:
+        return render_to_string(advreport.get_template(), context, request=request)
+    else:
+        return render(request, advreport.get_template(), context)
 
 
 @report_view
@@ -213,7 +215,7 @@ def ajax_form(request, advreport, method, object_id, param=None):
                 context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': form, 'item': object}))})
 
         context.update({'object': object, 'action': a})
-        return render_to_response('advanced_reports/ajax_form.html', context, context_instance=RequestContext(request))
+        return render(request, 'advanced_reports/ajax_form.html', context)
 
     else:
         a = a.copy_with_instanced_form(advreport, prefix=object_id, instance=a.get_form_instance(advreport.get_item_for_id(object_id), param=param))
@@ -223,10 +225,10 @@ def ajax_form(request, advreport, method, object_id, param=None):
         if a.form_template:
             context.update({'response_form_template': mark_safe(render_to_string(a.form_template, {'form': a.form, 'item': object}))})
 
-        return render_to_response(
+        return render(
+            request,
             'advanced_reports/ajax_form.html',
-            context,
-            context_instance=RequestContext(request)
+            context
         )
 
 

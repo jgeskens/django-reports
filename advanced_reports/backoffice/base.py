@@ -1,11 +1,11 @@
 from collections import defaultdict
-from django.conf.urls import url
+from django.urls import re_path as url
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.db.models.signals import post_save, post_delete
 from django.http import Http404, HttpResponse
 from django.http.response import HttpResponseForbidden
@@ -960,10 +960,10 @@ class BackOfficeBase(ViewMixin, SearchMixin, ModelMixin):
         Calls ``django.contrib.auth.views.logout`` with a custom template and
         extra context.
         """
-        from django.contrib.auth.views import logout
+        from django.contrib.auth.views import LogoutView
         kwargs['template_name'] = self.logout_template
         kwargs['extra_context'] = self.default_context()
-        return logout(request, *args, **kwargs)
+        return LogoutView().as_view(request, *args, **kwargs)
 
     def home(self, request):
         """
